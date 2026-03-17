@@ -30,7 +30,11 @@ export const authOptions: NextAuthOptions = {
         const ip = getClientIp(req);
         const limiter = await rateLimit(`login:${ip}`);
         if (!limiter.allowed) {
-          return null;
+          const retryInMinutes = Math.max(
+            1,
+            Math.ceil((limiter.reset - Date.now()) / 60000)
+          );
+          throw new Error(`RATE_LIMIT:${retryInMinutes}`);
         }
 
         const user = await prisma.user.findUnique({
