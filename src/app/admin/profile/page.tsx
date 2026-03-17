@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import styles from "./page.module.css";
+import PasswordForm from "./PasswordForm";
 
 export default async function ProfilePage() {
   const session = await getServerSession(authOptions);
@@ -27,10 +28,10 @@ export default async function ProfilePage() {
         </div>
       </section>
 
-      <p className={styles.note}>
-        Parola değişimi ve profil güncellemeleri için bir sonraki adımda ayrı bir
-        form ekleyebiliriz.
-      </p>
+      <section className={styles.section}>
+        <h2>Parola Güncelle</h2>
+        <PasswordForm />
+      </section>
     </div>
   );
 }
