@@ -1,0 +1,83 @@
+services:
+  postgres-dev:
+    image: postgres:16-alpine
+    container_name: blog-db-dev
+    profiles:
+      - dev
+    ports:
+      - "${DATABASE_DEV_PORT:-5432}:5432"
+    environment:
+      POSTGRES_DB: ${DATABASE_DEV_NAME}
+      POSTGRES_USER: ${DATABASE_DEV_USER}
+      POSTGRES_PASSWORD: ${DATABASE_DEV_PASSWORD}
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_DEV_USER} -d ${DATABASE_DEV_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  postgres-test:
+    image: postgres:16-alpine
+    container_name: blog-db-test
+    profiles:
+      - test
+    ports:
+      - "${DATABASE_TEST_PORT:-5433}:5432"
+    environment:
+      POSTGRES_DB: ${DATABASE_TEST_NAME}
+      POSTGRES_USER: ${DATABASE_TEST_USER}
+      POSTGRES_PASSWORD: ${DATABASE_TEST_PASSWORD}
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_TEST_USER} -d ${DATABASE_TEST_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  postgres-prod:
+    image: postgres:16-alpine
+    container_name: blog-db-prod
+    profiles:
+      - prod
+    ports:
+      - "127.0.0.1:${DATABASE_PROD_PORT:-5434}:5432"
+    environment:
+      POSTGRES_DB: ${DATABASE_PROD_NAME}
+      POSTGRES_USER: ${DATABASE_PROD_USER}
+      POSTGRES_PASSWORD: ${DATABASE_PROD_PASSWORD}
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_PROD_USER} -d ${DATABASE_PROD_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: blog-pgadmin
+    profiles:
+      - dev
+    depends_on:
+      - postgres-dev
+    ports:
+      - "5050:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+
+volumes:
+  postgres_dev_data:
+  postgres_test_data:
+  postgres_prod_data:
+  pgadmin_data:
