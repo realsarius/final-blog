@@ -60,6 +60,11 @@
 .signOut {
   font-size: 14px;
   color: var(--accent-dark);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
   border-bottom: 1px solid transparent;
 }
 

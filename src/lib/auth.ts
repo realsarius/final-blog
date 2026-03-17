@@ -5,6 +5,12 @@ import { prisma } from "@/lib/prisma";
 import type { Role } from "@prisma/client";
 import { getClientIp, rateLimit } from "@/lib/rateLimit";
 
+const isProd = process.env.NODE_ENV === "production";
+
+if (isProd && !process.env.NEXTAUTH_SECRET) {
+  throw new Error("NEXTAUTH_SECRET must be set in production.");
+}
+
 export const authOptions: NextAuthOptions = {
   providers: [
     Credentials({
@@ -50,18 +56,18 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   session: { strategy: "jwt" },
-  useSecureCookies: process.env.NODE_ENV === "production",
+  useSecureCookies: isProd,
   cookies: {
     sessionToken: {
       name:
-        process.env.NODE_ENV === "production"
+        isProd
           ? "__Secure-next-auth.session-token"
           : "next-auth.session-token",
       options: {
         httpOnly: true,
         sameSite: "lax",
         path: "/",
-        secure: process.env.NODE_ENV === "production",
+        secure: isProd,
       },
     },
   },
