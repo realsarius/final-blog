@@ -6,6 +6,7 @@ import { slugify } from "@/lib/slug";
 import { authOptions } from "@/lib/auth";
 import { getFirstErrorMessage, postSchema, splitCommaList } from "@/lib/validation";
 import styles from "../../post-form.module.css";
+import MarkdownField from "../../MarkdownField";
 
 async function generateUniquePostSlug(base: string, currentId: string) {
   let slug = base;
@@ -169,7 +170,7 @@ export default async function EditPostPage({ params, searchParams }: PageProps) 
 
         <div className={styles.field}>
           <label htmlFor="content">İçerik</label>
-          <textarea id="content" name="content" required defaultValue={post.content} />
+          <MarkdownField name="content" required defaultValue={post.content} />
         </div>
 
         <div className={styles.row}>
