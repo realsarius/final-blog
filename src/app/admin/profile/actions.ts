@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { compare, hash } from "bcryptjs";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { passwordSchema } from "@/lib/validation";
 
 interface ActionState {
   ok: boolean;
@@ -27,8 +28,9 @@ export async function changePassword(
     return { ok: false, message: "Tüm alanları doldur." };
   }
 
-  if (newPassword.length < 8) {
-    return { ok: false, message: "Yeni parola en az 8 karakter olmalı." };
+  const passwordValidation = passwordSchema.safeParse(newPassword);
+  if (!passwordValidation.success) {
+    return { ok: false, message: passwordValidation.error.issues[0]?.message ?? "Parola hatalı." };
   }
 
   if (newPassword !== confirmPassword) {

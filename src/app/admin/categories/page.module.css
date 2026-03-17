@@ -18,6 +18,11 @@
   line-height: 1.6;
 }
 
+.error {
+  color: #b91c1c;
+  font-size: 13px;
+}
+
 .form {
   display: flex;
   gap: var(--space-3);

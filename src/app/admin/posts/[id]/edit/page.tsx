@@ -4,14 +4,8 @@ import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/slug";
 import { authOptions } from "@/lib/auth";
+import { getFirstErrorMessage, postSchema, splitCommaList } from "@/lib/validation";
 import styles from "../../post-form.module.css";
-
-function splitCommaList(value: string) {
-  return value
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
 
 async function generateUniquePostSlug(base: string, currentId: string) {
   let slug = base;
@@ -30,21 +24,37 @@ async function updatePost(formData: FormData) {
   "use server";
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
-    redirect("/login");
+    redirect("/login?callbackUrl=/admin/posts");
   }
 
   const id = formData.get("id")?.toString() ?? "";
-  const title = formData.get("title")?.toString().trim() ?? "";
-  const slugInput = formData.get("slug")?.toString().trim() ?? "";
-  const excerpt = formData.get("excerpt")?.toString().trim() ?? "";
-  const content = formData.get("content")?.toString().trim() ?? "";
-  const coverImageUrl = formData.get("coverImageUrl")?.toString().trim() ?? "";
+  const title = formData.get("title")?.toString() ?? "";
+  const slugInput = formData.get("slug")?.toString() ?? "";
+  const excerpt = formData.get("excerpt")?.toString() ?? "";
+  const content = formData.get("content")?.toString() ?? "";
+  const coverImageUrl = formData.get("coverImageUrl")?.toString() ?? "";
   const status = formData.get("status")?.toString() === "PUBLISHED" ? "PUBLISHED" : "DRAFT";
   const categories = splitCommaList(formData.get("categories")?.toString() ?? "");
   const tags = splitCommaList(formData.get("tags")?.toString() ?? "");
 
   if (!id || !title || !content) {
-    return;
+    redirect(`/admin/posts/${id}/edit?error=${encodeURIComponent("Başlık ve içerik zorunlu.")}`);
+  }
+
+  const validation = postSchema.safeParse({
+    title,
+    slug: slugInput,
+    excerpt,
+    content,
+    coverImageUrl,
+    status,
+    categories,
+    tags,
+  });
+
+  if (!validation.success) {
+    const message = getFirstErrorMessage(validation);
+    redirect(`/admin/posts/${id}/edit?error=${encodeURIComponent(message)}`);
   }
 
   const existingPost = await prisma.post.findUnique({ where: { id } });
@@ -52,7 +62,7 @@ async function updatePost(formData: FormData) {
     return;
   }
 
-  const baseSlug = slugify(slugInput || title);
+  const baseSlug = slugify(slugInput || validation.data.title);
   const slug = await generateUniquePostSlug(baseSlug || "yazi", id);
   const publishedAt =
     status === "PUBLISHED"
@@ -62,16 +72,16 @@ async function updatePost(formData: FormData) {
   await prisma.post.update({
     where: { id },
     data: {
-      title,
+      title: validation.data.title,
       slug,
-      excerpt: excerpt || null,
-      content,
-      coverImageUrl: coverImageUrl || null,
+      excerpt: validation.data.excerpt || null,
+      content: validation.data.content,
+      coverImageUrl: validation.data.coverImageUrl || null,
       status,
       publishedAt,
       categories: {
         deleteMany: {},
-        create: categories.map((name) => ({
+        create: validation.data.categories.map((name) => ({
           category: {
             connectOrCreate: {
               where: { slug: slugify(name) },
@@ -82,7 +92,7 @@ async function updatePost(formData: FormData) {
       },
       tags: {
         deleteMany: {},
-        create: tags.map((name) => ({
+        create: validation.data.tags.map((name) => ({
           tag: {
             connectOrCreate: {
               where: { slug: slugify(name) },
@@ -100,9 +110,10 @@ async function updatePost(formData: FormData) {
 
 interface PageProps {
   params: { id: string };
+  searchParams?: { error?: string };
 }
 
-export default async function EditPostPage({ params }: PageProps) {
+export default async function EditPostPage({ params, searchParams }: PageProps) {
   const post = await prisma.post.findUnique({
     where: { id: params.id },
     include: {
@@ -124,6 +135,10 @@ export default async function EditPostPage({ params }: PageProps) {
         <h1>Yazıyı Düzenle</h1>
         <p>Mevcut içeriği güncelle ve değişiklikleri kaydet.</p>
       </header>
+
+      {searchParams?.error ? (
+        <p className={styles.error}>{searchParams.error}</p>
+      ) : null}
 
       <form className={styles.form} action={updatePost}>
         <input type="hidden" name="id" value={post.id} />

@@ -4,14 +4,8 @@ import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/slug";
 import { authOptions } from "@/lib/auth";
+import { getFirstErrorMessage, postSchema, splitCommaList } from "@/lib/validation";
 import styles from "../post-form.module.css";
-
-function splitCommaList(value: string) {
-  return value
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
 
 async function generateUniquePostSlug(base: string) {
   let slug = base;
@@ -27,37 +21,49 @@ async function createPost(formData: FormData) {
   "use server";
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
-    redirect("/login");
+    redirect("/login?callbackUrl=/admin/posts/new");
   }
 
-  const title = formData.get("title")?.toString().trim() ?? "";
-  const slugInput = formData.get("slug")?.toString().trim() ?? "";
-  const excerpt = formData.get("excerpt")?.toString().trim() ?? "";
-  const content = formData.get("content")?.toString().trim() ?? "";
-  const coverImageUrl = formData.get("coverImageUrl")?.toString().trim() ?? "";
+  const title = formData.get("title")?.toString() ?? "";
+  const slugInput = formData.get("slug")?.toString() ?? "";
+  const excerpt = formData.get("excerpt")?.toString() ?? "";
+  const content = formData.get("content")?.toString() ?? "";
+  const coverImageUrl = formData.get("coverImageUrl")?.toString() ?? "";
   const status = formData.get("status")?.toString() === "PUBLISHED" ? "PUBLISHED" : "DRAFT";
   const categories = splitCommaList(formData.get("categories")?.toString() ?? "");
   const tags = splitCommaList(formData.get("tags")?.toString() ?? "");
 
-  if (!title || !content) {
-    return;
+  const validation = postSchema.safeParse({
+    title,
+    slug: slugInput,
+    excerpt,
+    content,
+    coverImageUrl,
+    status,
+    categories,
+    tags,
+  });
+
+  if (!validation.success) {
+    const message = getFirstErrorMessage(validation);
+    redirect(`/admin/posts/new?error=${encodeURIComponent(message)}`);
   }
 
-  const baseSlug = slugify(slugInput || title);
+  const baseSlug = slugify(slugInput || validation.data.title);
   const slug = await generateUniquePostSlug(baseSlug || "yazi");
 
   await prisma.post.create({
     data: {
-      title,
+      title: validation.data.title,
       slug,
-      excerpt: excerpt || null,
-      content,
-      coverImageUrl: coverImageUrl || null,
+      excerpt: validation.data.excerpt || null,
+      content: validation.data.content,
+      coverImageUrl: validation.data.coverImageUrl || null,
       status,
       publishedAt: status === "PUBLISHED" ? new Date() : null,
       authorId: session.user.id,
       categories: {
-        create: categories.map((name) => ({
+        create: validation.data.categories.map((name) => ({
           category: {
             connectOrCreate: {
               where: { slug: slugify(name) },
@@ -67,7 +73,7 @@ async function createPost(formData: FormData) {
         })),
       },
       tags: {
-        create: tags.map((name) => ({
+        create: validation.data.tags.map((name) => ({
           tag: {
             connectOrCreate: {
               where: { slug: slugify(name) },
@@ -83,13 +89,21 @@ async function createPost(formData: FormData) {
   redirect("/admin/posts");
 }
 
-export default function NewPostPage() {
+export default function NewPostPage({
+  searchParams,
+}: {
+  searchParams?: { error?: string };
+}) {
   return (
     <div className={styles.page}>
       <header className={styles.header}>
         <h1>Yeni Yazı</h1>
         <p>Başlık, içerik ve kategori bilgilerini girerek yeni yazı oluştur.</p>
       </header>
+
+      {searchParams?.error ? (
+        <p className={styles.error}>{searchParams.error}</p>
+      ) : null}
 
       <form className={styles.form} action={createPost}>
         <div className={styles.field}>

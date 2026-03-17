@@ -1,13 +1,17 @@
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/slug";
+import { getFirstErrorMessage, nameSchema } from "@/lib/validation";
 import styles from "./page.module.css";
 
 async function addTag(formData: FormData) {
   "use server";
   const name = formData.get("name")?.toString().trim() ?? "";
-  if (!name) {
-    return;
+  const validation = nameSchema.safeParse(name);
+  if (!validation.success) {
+    const message = getFirstErrorMessage(validation);
+    redirect(`/admin/tags?error=${encodeURIComponent(message)}`);
   }
   const slug = slugify(name) || "etiket";
   let finalSlug = slug;
@@ -17,7 +21,7 @@ async function addTag(formData: FormData) {
     counter += 1;
   }
   await prisma.tag.create({
-    data: { name, slug: finalSlug },
+    data: { name: validation.data, slug: finalSlug },
   });
   revalidatePath("/admin/tags");
 }
@@ -30,12 +34,18 @@ async function updateTag(formData: FormData) {
     return;
   }
 
+  const validation = nameSchema.safeParse(name);
+  if (!validation.success) {
+    const message = getFirstErrorMessage(validation);
+    redirect(`/admin/tags?error=${encodeURIComponent(message)}`);
+  }
+
   const existing = await prisma.tag.findUnique({ where: { id } });
   if (!existing) {
     return;
   }
 
-  const baseSlug = slugify(name) || "etiket";
+  const baseSlug = slugify(validation.data) || "etiket";
   let finalSlug = baseSlug;
   let counter = 2;
   while (true) {
@@ -51,7 +61,7 @@ async function updateTag(formData: FormData) {
 
   await prisma.tag.update({
     where: { id },
-    data: { name, slug: finalSlug },
+    data: { name: validation.data, slug: finalSlug },
   });
   revalidatePath("/admin/tags");
 }
@@ -67,7 +77,11 @@ async function deleteTag(formData: FormData) {
   revalidatePath("/admin/tags");
 }
 
-export default async function TagsPage() {
+export default async function TagsPage({
+  searchParams,
+}: {
+  searchParams?: { error?: string };
+}) {
   const tags = await prisma.tag.findMany({
     orderBy: { name: "asc" },
     include: { _count: { select: { posts: true } } },
@@ -81,6 +95,10 @@ export default async function TagsPage() {
           <p>Yazıları detaylandırmak için etiketleri buradan yönetebilirsin.</p>
         </div>
       </header>
+
+      {searchParams?.error ? (
+        <p className={styles.error}>{searchParams.error}</p>
+      ) : null}
 
       <form className={styles.form} action={addTag}>
         <input name="name" placeholder="Yeni etiket" />

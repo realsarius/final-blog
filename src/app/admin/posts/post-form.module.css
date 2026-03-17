@@ -60,6 +60,11 @@
   gap: var(--space-3);
 }
 
+.error {
+  color: #b91c1c;
+  font-size: 13px;
+}
+
 .primary {
   font-size: 14px;
   color: var(--surface);

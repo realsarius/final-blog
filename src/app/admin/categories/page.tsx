@@ -1,13 +1,17 @@
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/slug";
+import { getFirstErrorMessage, nameSchema } from "@/lib/validation";
 import styles from "./page.module.css";
 
 async function addCategory(formData: FormData) {
   "use server";
   const name = formData.get("name")?.toString().trim() ?? "";
-  if (!name) {
-    return;
+  const validation = nameSchema.safeParse(name);
+  if (!validation.success) {
+    const message = getFirstErrorMessage(validation);
+    redirect(`/admin/categories?error=${encodeURIComponent(message)}`);
   }
   const slug = slugify(name) || "kategori";
   let finalSlug = slug;
@@ -17,7 +21,7 @@ async function addCategory(formData: FormData) {
     counter += 1;
   }
   await prisma.category.create({
-    data: { name, slug: finalSlug },
+    data: { name: validation.data, slug: finalSlug },
   });
   revalidatePath("/admin/categories");
 }
@@ -30,12 +34,18 @@ async function updateCategory(formData: FormData) {
     return;
   }
 
+  const validation = nameSchema.safeParse(name);
+  if (!validation.success) {
+    const message = getFirstErrorMessage(validation);
+    redirect(`/admin/categories?error=${encodeURIComponent(message)}`);
+  }
+
   const existing = await prisma.category.findUnique({ where: { id } });
   if (!existing) {
     return;
   }
 
-  const baseSlug = slugify(name) || "kategori";
+  const baseSlug = slugify(validation.data) || "kategori";
   let finalSlug = baseSlug;
   let counter = 2;
   while (true) {
@@ -51,7 +61,7 @@ async function updateCategory(formData: FormData) {
 
   await prisma.category.update({
     where: { id },
-    data: { name, slug: finalSlug },
+    data: { name: validation.data, slug: finalSlug },
   });
   revalidatePath("/admin/categories");
 }
@@ -67,7 +77,11 @@ async function deleteCategory(formData: FormData) {
   revalidatePath("/admin/categories");
 }
 
-export default async function CategoriesPage() {
+export default async function CategoriesPage({
+  searchParams,
+}: {
+  searchParams?: { error?: string };
+}) {
   const categories = await prisma.category.findMany({
     orderBy: { name: "asc" },
     include: { _count: { select: { posts: true } } },
@@ -81,6 +95,10 @@ export default async function CategoriesPage() {
           <p>Yazıları gruplamak için kategorileri burada yönetebilirsin.</p>
         </div>
       </header>
+
+      {searchParams?.error ? (
+        <p className={styles.error}>{searchParams.error}</p>
+      ) : null}
 
       <form className={styles.form} action={addCategory}>
         <input name="name" placeholder="Yeni kategori" />
