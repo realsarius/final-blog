@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { formatDate } from "@/lib/format";
+import ConfirmDeleteForm from "@/components/admin/ConfirmDeleteForm";
 import styles from "./page.module.css";
 
 async function deletePost(formData: FormData) {
@@ -14,6 +16,7 @@ async function deletePost(formData: FormData) {
   await prisma.postTag.deleteMany({ where: { postId: id } });
   await prisma.post.delete({ where: { id } });
   revalidatePath("/admin/posts");
+  redirect(`/admin/posts?success=${encodeURIComponent("Yazı silindi.")}`);
 }
 
 export default async function AdminPostsPage() {
@@ -52,12 +55,12 @@ export default async function AdminPostsPage() {
                 <Link className={styles.link} href={`/admin/posts/${post.id}/edit`}>
                   Düzenle
                 </Link>
-                <form action={deletePost}>
-                  <input type="hidden" name="id" value={post.id} />
-                  <button className={styles.danger} type="submit">
-                    Sil
-                  </button>
-                </form>
+                <ConfirmDeleteForm
+                  action={deletePost}
+                  idValue={post.id}
+                  className={styles.danger}
+                  confirmMessage="Bu yazıyı silmek istediğine emin misin?"
+                />
               </div>
             </div>
           ))}

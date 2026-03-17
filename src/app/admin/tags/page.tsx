@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/slug";
 import { getFirstErrorMessage, nameSchema } from "@/lib/validation";
+import ConfirmDeleteForm from "@/components/admin/ConfirmDeleteForm";
 import styles from "./page.module.css";
 
 async function addTag(formData: FormData) {
@@ -24,6 +25,7 @@ async function addTag(formData: FormData) {
     data: { name: validation.data, slug: finalSlug },
   });
   revalidatePath("/admin/tags");
+  redirect(`/admin/tags?success=${encodeURIComponent("Etiket eklendi.")}`);
 }
 
 async function updateTag(formData: FormData) {
@@ -64,6 +66,7 @@ async function updateTag(formData: FormData) {
     data: { name: validation.data, slug: finalSlug },
   });
   revalidatePath("/admin/tags");
+  redirect(`/admin/tags?success=${encodeURIComponent("Etiket güncellendi.")}`);
 }
 
 async function deleteTag(formData: FormData) {
@@ -75,6 +78,7 @@ async function deleteTag(formData: FormData) {
   await prisma.postTag.deleteMany({ where: { tagId: id } });
   await prisma.tag.delete({ where: { id } });
   revalidatePath("/admin/tags");
+  redirect(`/admin/tags?success=${encodeURIComponent("Etiket silindi.")}`);
 }
 
 export default async function TagsPage({
@@ -119,12 +123,12 @@ export default async function TagsPage({
                 <button type="submit">Kaydet</button>
               </form>
               <span className={styles.meta}>{tag._count.posts} yazı</span>
-              <form action={deleteTag}>
-                <input type="hidden" name="id" value={tag.id} />
-                <button className={styles.danger} type="submit">
-                  Sil
-                </button>
-              </form>
+              <ConfirmDeleteForm
+                action={deleteTag}
+                idValue={tag.id}
+                className={styles.danger}
+                confirmMessage="Bu etiketi silmek istediğine emin misin?"
+              />
             </div>
           ))}
         </div>

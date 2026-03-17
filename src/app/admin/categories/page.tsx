@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/slug";
 import { getFirstErrorMessage, nameSchema } from "@/lib/validation";
+import ConfirmDeleteForm from "@/components/admin/ConfirmDeleteForm";
 import styles from "./page.module.css";
 
 async function addCategory(formData: FormData) {
@@ -24,6 +25,7 @@ async function addCategory(formData: FormData) {
     data: { name: validation.data, slug: finalSlug },
   });
   revalidatePath("/admin/categories");
+  redirect(`/admin/categories?success=${encodeURIComponent("Kategori eklendi.")}`);
 }
 
 async function updateCategory(formData: FormData) {
@@ -64,6 +66,7 @@ async function updateCategory(formData: FormData) {
     data: { name: validation.data, slug: finalSlug },
   });
   revalidatePath("/admin/categories");
+  redirect(`/admin/categories?success=${encodeURIComponent("Kategori güncellendi.")}`);
 }
 
 async function deleteCategory(formData: FormData) {
@@ -75,6 +78,7 @@ async function deleteCategory(formData: FormData) {
   await prisma.postCategory.deleteMany({ where: { categoryId: id } });
   await prisma.category.delete({ where: { id } });
   revalidatePath("/admin/categories");
+  redirect(`/admin/categories?success=${encodeURIComponent("Kategori silindi.")}`);
 }
 
 export default async function CategoriesPage({
@@ -119,12 +123,12 @@ export default async function CategoriesPage({
                 <button type="submit">Kaydet</button>
               </form>
               <span className={styles.meta}>{category._count.posts} yazı</span>
-              <form action={deleteCategory}>
-                <input type="hidden" name="id" value={category.id} />
-                <button className={styles.danger} type="submit">
-                  Sil
-                </button>
-              </form>
+              <ConfirmDeleteForm
+                action={deleteCategory}
+                idValue={category.id}
+                className={styles.danger}
+                confirmMessage="Bu kategoriyi silmek istediğine emin misin?"
+              />
             </div>
           ))}
         </div>
