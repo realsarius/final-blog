@@ -22,6 +22,40 @@ async function addTag(formData: FormData) {
   revalidatePath("/admin/tags");
 }
 
+async function updateTag(formData: FormData) {
+  "use server";
+  const id = formData.get("id")?.toString();
+  const name = formData.get("name")?.toString().trim() ?? "";
+  if (!id || !name) {
+    return;
+  }
+
+  const existing = await prisma.tag.findUnique({ where: { id } });
+  if (!existing) {
+    return;
+  }
+
+  const baseSlug = slugify(name) || "etiket";
+  let finalSlug = baseSlug;
+  let counter = 2;
+  while (true) {
+    const conflict = await prisma.tag.findUnique({
+      where: { slug: finalSlug },
+    });
+    if (!conflict || conflict.id === id) {
+      break;
+    }
+    finalSlug = `${baseSlug}-${counter}`;
+    counter += 1;
+  }
+
+  await prisma.tag.update({
+    where: { id },
+    data: { name, slug: finalSlug },
+  });
+  revalidatePath("/admin/tags");
+}
+
 async function deleteTag(formData: FormData) {
   "use server";
   const id = formData.get("id")?.toString();
@@ -61,10 +95,12 @@ export default async function TagsPage() {
         <div className={styles.table}>
           {tags.map((tag) => (
             <div key={tag.id} className={styles.row}>
-              <div>
-                <p className={styles.title}>{tag.name}</p>
-                <span className={styles.meta}>{tag._count.posts} yazı</span>
-              </div>
+              <form className={styles.editForm} action={updateTag}>
+                <input type="hidden" name="id" value={tag.id} />
+                <input name="name" defaultValue={tag.name} />
+                <button type="submit">Kaydet</button>
+              </form>
+              <span className={styles.meta}>{tag._count.posts} yazı</span>
               <form action={deleteTag}>
                 <input type="hidden" name="id" value={tag.id} />
                 <button className={styles.danger} type="submit">
