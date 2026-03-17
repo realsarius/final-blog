@@ -3,6 +3,7 @@ import Credentials from "next-auth/providers/credentials";
 import { compare } from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import type { Role } from "@prisma/client";
+import { getClientIp, rateLimit } from "@/lib/rateLimit";
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -12,11 +13,17 @@ export const authOptions: NextAuthOptions = {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         const email = credentials?.email?.toLowerCase().trim();
         const password = credentials?.password ?? "";
 
         if (!email || !password) {
+          return null;
+        }
+
+        const ip = getClientIp(req);
+        const limiter = await rateLimit(`login:${ip}`);
+        if (!limiter.allowed) {
           return null;
         }
 
@@ -43,6 +50,21 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   session: { strategy: "jwt" },
+  useSecureCookies: process.env.NODE_ENV === "production",
+  cookies: {
+    sessionToken: {
+      name:
+        process.env.NODE_ENV === "production"
+          ? "__Secure-next-auth.session-token"
+          : "next-auth.session-token",
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+      },
+    },
+  },
   pages: {
     signIn: "/login",
   },
