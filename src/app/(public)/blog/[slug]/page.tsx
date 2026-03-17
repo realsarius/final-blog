@@ -2,9 +2,26 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { formatDate } from "@/lib/format";
 import styles from "./page.module.css";
+import type { Metadata } from "next";
 
 interface PageProps {
   params: { slug: string };
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const post = await prisma.post.findUnique({
+    where: { slug: params.slug },
+    select: { title: true, excerpt: true, status: true },
+  });
+
+  if (!post || post.status !== "PUBLISHED") {
+    return { title: "Yazı bulunamadı" };
+  }
+
+  return {
+    title: post.title,
+    description: post.excerpt ?? "Blog yazısı",
+  };
 }
 
 export default async function BlogDetailPage({ params }: PageProps) {

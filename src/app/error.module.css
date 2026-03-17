@@ -1,0 +1,36 @@
+.page {
+  padding: var(--space-8) 0;
+}
+
+.page h1 {
+  font-size: 26px;
+  margin-bottom: var(--space-3);
+}
+
+.page p {
+  color: var(--muted);
+  margin-bottom: var(--space-4);
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.actions a,
+.actions button {
+  font-size: 14px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.actions a:hover,
+.actions button:hover {
+  border-color: var(--accent-dark);
+  color: var(--accent-dark);
+}
