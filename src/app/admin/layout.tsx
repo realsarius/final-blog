@@ -1,6 +1,7 @@
 import Link from "next/link";
 import styles from "./layout.module.css";
 import SignOutButton from "@/components/admin/SignOutButton";
+import AdminToasts from "@/components/admin/AdminToasts";
 
 const navItems = [
   { href: "/admin", label: "Genel Bakış" },
@@ -28,6 +29,7 @@ export default function AdminLayout({
         </nav>
       </aside>
       <div className={styles.mainArea}>
+        <AdminToasts />
         <header className={styles.topbar}>
           <span>Yönetim Paneli</span>
           <SignOutButton className={styles.signOut} />

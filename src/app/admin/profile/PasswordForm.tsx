@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { useFormState, useFormStatus } from "react-dom";
+import { toast } from "sonner";
 import { changePassword } from "./actions";
 import styles from "./page.module.css";
 
@@ -17,6 +19,19 @@ function SubmitButton() {
 
 export default function PasswordForm() {
   const [state, formAction] = useFormState(changePassword, initialState);
+  const lastMessageRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!state.message || lastMessageRef.current === state.message) {
+      return;
+    }
+    lastMessageRef.current = state.message;
+    if (state.ok) {
+      toast.success(state.message);
+    } else {
+      toast.error(state.message);
+    }
+  }, [state]);
 
   return (
     <form className={styles.form} action={formAction}>

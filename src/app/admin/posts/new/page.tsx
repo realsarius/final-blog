@@ -87,7 +87,7 @@ async function createPost(formData: FormData) {
   });
 
   revalidatePath("/admin/posts");
-  redirect("/admin/posts");
+  redirect(`/admin/posts?success=${encodeURIComponent("Yazı oluşturuldu.")}`);
 }
 
 export default function NewPostPage({
