@@ -1,4 +1,44 @@
 services:
+  blog-web-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: blog-web-dev
+    profiles:
+      - dev
+    environment:
+      NODE_ENV: development
+      NEXTAUTH_URL: ${NEXTAUTH_URL}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      DATABASE_URL: postgresql://${DATABASE_DEV_USER}:${DATABASE_DEV_PASSWORD}@postgres-dev:5432/${DATABASE_DEV_NAME}?schema=public
+      WATCHPACK_POLLING: "true"
+    ports:
+      - "3007:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    depends_on:
+      postgres-dev:
+        condition: service_healthy
+
+  blog-web-prod:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: blog-web-prod
+    profiles:
+      - prod
+    environment:
+      NODE_ENV: production
+      NEXTAUTH_URL: ${NEXTAUTH_URL}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      DATABASE_URL: postgresql://${DATABASE_PROD_USER}:${DATABASE_PROD_PASSWORD}@postgres-prod:5432/${DATABASE_PROD_NAME}?schema=public
+    ports:
+      - "127.0.0.1:3007:3000"
+    depends_on:
+      postgres-prod:
+        condition: service_healthy
+
   postgres-dev:
     image: postgres:16-alpine
     container_name: blog-db-dev
@@ -67,7 +107,7 @@ services:
     depends_on:
       - postgres-dev
     ports:
-      - "5050:80"
+      - "5052:80"
     environment:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
