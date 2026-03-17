@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { formatDate } from "@/lib/format";
+import { formatReadingTime } from "@/lib/readingTime";
 import styles from "./page.module.css";
 import type { Metadata } from "next";
 
@@ -40,6 +41,7 @@ export default async function BlogDetailPage({ params }: PageProps) {
 
   const categories = post.categories.map((item) => item.category.name).join(", ");
   const tags = post.tags.map((item) => item.tag.name).join(", ");
+  const readingTime = formatReadingTime(post.content);
   const paragraphs = post.content
     ? post.content.split(/\n\n+/).map((block) => block.trim())
     : [];
@@ -53,6 +55,7 @@ export default async function BlogDetailPage({ params }: PageProps) {
             <span>{formatDate(post.publishedAt ?? post.createdAt)}</span>
             <span>{post.author.firstName} {post.author.lastName}</span>
             {categories ? <span>{categories}</span> : null}
+            {readingTime ? <span>{readingTime}</span> : null}
           </div>
           {post.excerpt ? <p className={styles.excerpt}>{post.excerpt}</p> : null}
         </header>

@@ -31,26 +31,75 @@ async function main() {
 
   const email = process.env.ADMIN_EMAIL.toLowerCase();
   const existing = await prisma.user.findUnique({ where: { email } });
+  let admin = existing;
 
-  if (existing) {
-    console.log("Admin user already exists. Skipping seed.");
-    return;
+  if (!admin) {
+    const passwordHash = await hash(process.env.ADMIN_PASSWORD, 12);
+    admin = await prisma.user.create({
+      data: {
+        firstName: process.env.ADMIN_FIRST_NAME,
+        lastName: process.env.ADMIN_LAST_NAME,
+        email,
+        passwordHash,
+        role: "ADMIN",
+        isActive: true,
+      },
+    });
+    console.log("Admin user seeded successfully.");
+  } else {
+    console.log("Admin user already exists. Skipping user seed.");
   }
 
-  const passwordHash = await hash(process.env.ADMIN_PASSWORD, 12);
+  const existingPost = await prisma.post.findFirst();
+  if (!existingPost) {
+    const category = await prisma.category.create({
+      data: {
+        name: "Kişisel Notlar",
+        slug: "kisisel-notlar",
+      },
+    });
 
-  await prisma.user.create({
-    data: {
-      firstName: process.env.ADMIN_FIRST_NAME,
-      lastName: process.env.ADMIN_LAST_NAME,
-      email,
-      passwordHash,
-      role: "ADMIN",
-      isActive: true,
-    },
-  });
+    const tag = await prisma.tag.create({
+      data: {
+        name: "başlangıç",
+        slug: "baslangic",
+      },
+    });
 
-  console.log("Admin user seeded successfully.");
+    const post = await prisma.post.create({
+      data: {
+        title: "İlk yazı: Blog nasıl şekillenecek?",
+        slug: "ilk-yazi-blog-nasil-sekillenecek",
+        excerpt:
+          "Bu yazıda blogun hedeflerini, içerik akışını ve ileride neleri paylaşmayı planladığımı özetliyorum.",
+        content:
+          "Merhaba! Bu blogu teknik notlarımı derlemek, öğrendiklerimi paylaşmak ve üretim hızımı korumak için kurdum.\\n\\nYakın dönemde burada proje notları, öğrenme özetleri ve küçük deneyler yer alacak.\\n\\nGeri bildirimlerin için iletişim sayfasından bana ulaşabilirsin.",
+        status: "PUBLISHED",
+        publishedAt: new Date(),
+        authorId: admin.id,
+        categories: {
+          create: [
+            {
+              category: {
+                connect: { id: category.id },
+              },
+            },
+          ],
+        },
+        tags: {
+          create: [
+            {
+              tag: {
+                connect: { id: tag.id },
+              },
+            },
+          ],
+        },
+      },
+    });
+
+    console.log(`Demo içerik oluşturuldu: ${post.title}`);
+  }
 }
 
 main()

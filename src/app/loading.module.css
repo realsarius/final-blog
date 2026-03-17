@@ -1,0 +1,24 @@
+.page {
+  padding: var(--space-7) 0;
+}
+
+.card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  padding: var(--space-5);
+  display: grid;
+  gap: var(--space-3);
+  max-width: 720px;
+}
+
+.title {
+  font-size: 16px;
+  color: var(--muted);
+}
+
+.bar {
+  height: 8px;
+  background: #efe4d7;
+  border-radius: 4px;
+}

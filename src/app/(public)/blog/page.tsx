@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { formatDate } from "@/lib/format";
+import { formatReadingTime } from "@/lib/readingTime";
 import styles from "./page.module.css";
 import type { Metadata } from "next";
 
@@ -42,12 +43,14 @@ export default async function BlogPage() {
                 .map((item) => item.category.name)
                 .join(", ");
               const tagNames = post.tags.map((item) => item.tag.name).join(", ");
+              const readingTime = formatReadingTime(post.content ?? "");
 
               return (
                 <article key={post.id} className={styles.item}>
                   <div className={styles.meta}>
                     <span>{formatDate(post.publishedAt ?? post.createdAt)}</span>
                     {categoryNames ? <span>{categoryNames}</span> : null}
+                    {readingTime ? <span>{readingTime}</span> : null}
                   </div>
                   <h2 className={styles.title}>{post.title}</h2>
                   {post.excerpt ? (
