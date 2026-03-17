@@ -5,6 +5,7 @@ const links = [
   { href: "/", label: "Ana Sayfa" },
   { href: "/blog", label: "Yazılar" },
   { href: "/about", label: "Hakkımda" },
+  { href: "/contact", label: "İletişim" },
   { href: "/privacy", label: "Gizlilik" },
 ];
 
