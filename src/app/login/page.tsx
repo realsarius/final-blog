@@ -3,6 +3,7 @@
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
+import { toast } from "sonner";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -29,10 +30,22 @@ export default function LoginPage() {
     setIsSubmitting(false);
 
     if (result?.error) {
-      setError("Giriş başarısız. Bilgileri kontrol edin.");
+      if (result.error.startsWith("RATE_LIMIT:")) {
+        const [, minutesRaw] = result.error.split(":");
+        const minutes = Number(minutesRaw);
+        const waitText = Number.isFinite(minutes) ? `${minutes} dakika` : "bir süre";
+        const message = `Çok fazla deneme yapıldı. ${waitText} sonra tekrar deneyin.`;
+        setError(message);
+        toast.error(message);
+        return;
+      }
+      const message = "Giriş başarısız. Bilgileri kontrol edin.";
+      setError(message);
+      toast.error(message);
       return;
     }
 
+    toast.success("Giriş başarılı.");
     router.replace(callbackUrl);
   };
 
