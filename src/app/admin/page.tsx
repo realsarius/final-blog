@@ -15,6 +15,9 @@ export default async function AdminPage() {
       }),
     ]);
 
+  const statusLabel = (status: string) =>
+    status === "PUBLISHED" ? "Yayında" : "Taslak";
+
   return (
     <div className={styles.page}>
       <header className={styles.header}>
@@ -61,7 +64,7 @@ export default async function AdminPage() {
                 <div>
                   <p className={styles.title}>{post.title}</p>
                   <span className={styles.meta}>
-                    {formatDate(post.createdAt)} · {post.status}
+                    {formatDate(post.createdAt)} · {statusLabel(post.status)}
                   </span>
                 </div>
                 <Link className={styles.sectionLink} href={`/admin/posts/${post.id}/edit`}>

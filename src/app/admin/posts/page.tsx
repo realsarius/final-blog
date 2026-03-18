@@ -24,6 +24,9 @@ export default async function AdminPostsPage() {
     orderBy: [{ createdAt: "desc" }],
   });
 
+  const statusLabel = (status: string) =>
+    status === "PUBLISHED" ? "Yayında" : "Taslak";
+
   return (
     <div className={styles.page}>
       <header className={styles.header}>
@@ -48,7 +51,7 @@ export default async function AdminPostsPage() {
               <div className={styles.info}>
                 <p className={styles.title}>{post.title}</p>
                 <span className={styles.meta}>
-                  {formatDate(post.createdAt)} · {post.status}
+                  {formatDate(post.createdAt)} · {statusLabel(post.status)}
                 </span>
               </div>
               <div className={styles.actions}>

@@ -84,8 +84,13 @@ async function deleteCategory(formData: FormData) {
 export default async function CategoriesPage({
   searchParams,
 }: {
-  searchParams?: { error?: string };
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  const resolvedSearchParams = (await searchParams) ?? {};
+  const error =
+    typeof resolvedSearchParams.error === "string"
+      ? resolvedSearchParams.error
+      : undefined;
   const categories = await prisma.category.findMany({
     orderBy: { name: "asc" },
     include: { _count: { select: { posts: true } } },
@@ -100,9 +105,7 @@ export default async function CategoriesPage({
         </div>
       </header>
 
-      {searchParams?.error ? (
-        <p className={styles.error}>{searchParams.error}</p>
-      ) : null}
+      {error ? <p className={styles.error}>{error}</p> : null}
 
       <form className={styles.form} action={addCategory}>
         <input name="name" placeholder="Yeni kategori" />
