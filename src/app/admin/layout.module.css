@@ -14,20 +14,33 @@
   gap: var(--space-5);
 }
 
-.brand {
-  font-size: 16px;
-  font-weight: 600;
+.sidebarHeader {
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.navGroup {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.navGroupTitle {
+  font-size: 20px;
+  font-weight: 700;
+  font-family: var(--font-serif);
 }
 
 .nav {
   display: grid;
-  gap: var(--space-2);
+  gap: var(--space-1);
 }
 
 .navLink {
   font-size: 14px;
   color: var(--muted);
-  padding: 6px 0;
+  padding: 7px 0;
   border-bottom: 1px solid transparent;
   transition: color 160ms ease, border-color 160ms ease;
 }
@@ -35,6 +48,30 @@
 .navLink:hover {
   color: var(--accent-dark);
   border-bottom-color: var(--accent-dark);
+}
+
+.sidebarFooter {
+  margin-top: auto;
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--line);
+}
+
+.backToSiteLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--accent-dark);
+  font-size: 14px;
+  border-bottom: 1px solid transparent;
+}
+
+.backToSiteLink:hover {
+  border-bottom-color: var(--accent-dark);
+}
+
+.backArrow {
+  font-size: 16px;
+  line-height: 1;
 }
 
 .mainArea {
