@@ -1,10 +1,21 @@
 import { z } from "zod";
+import { getContentText } from "./content";
+
+const contentSchema = z.string().trim().superRefine((value, ctx) => {
+  const normalized = getContentText(value);
+  if (normalized.trim().length < 10) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "İçerik en az 10 karakter olmalı.",
+    });
+  }
+});
 
 export const postSchema = z.object({
   title: z.string().trim().min(3, "Başlık en az 3 karakter olmalı."),
   slug: z.string().trim().optional(),
   excerpt: z.string().trim().max(300, "Özet en fazla 300 karakter olmalı.").optional(),
-  content: z.string().trim().min(10, "İçerik en az 10 karakter olmalı."),
+  content: contentSchema,
   coverImageUrl: z.string().trim().url("Kapak görseli URL formatı geçersiz.").optional().or(z.literal("")),
   status: z.enum(["DRAFT", "PUBLISHED"]),
   categories: z.array(z.string().trim()).default([]),

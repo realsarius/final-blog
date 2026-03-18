@@ -53,7 +53,7 @@ services:
       - test
       - prod
     ports:
-      - "127.0.0.1:6380:6379"
+      - "127.0.0.1:6381:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -68,7 +68,7 @@ services:
     profiles:
       - dev
     ports:
-      - "${DATABASE_DEV_PORT:-5432}:5432"
+      - "${DATABASE_DEV_PORT:-5438}:5432"
     environment:
       POSTGRES_DB: ${DATABASE_DEV_NAME}
       POSTGRES_USER: ${DATABASE_DEV_USER}

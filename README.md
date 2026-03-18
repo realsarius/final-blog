@@ -20,6 +20,34 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Upload Storage (Local / Cloudflare R2)
+
+Ana upload endpoint'i: `/api/v1/uploads`
+
+Geriye dönük uyumluluk için `/api/uploads` endpoint'i de aynı handler ile çalışır.
+
+Cloudflare R2 kullanmak için `.env` içinde aşağıdaki değişkenleri doldurun:
+
+- `UPLOAD_PROVIDER="r2"` (veya `auto`)
+- `R2_ACCOUNT_ID`
+- `R2_ACCESS_KEY_ID`
+- `R2_SECRET_ACCESS_KEY`
+- `R2_BUCKET_NAME`
+- `R2_PUBLIC_BASE_URL` (ör: `https://cdn.example.com`)
+- `R2_ENDPOINT` (boş bırakılırsa `https://<ACCOUNT_ID>.r2.cloudflarestorage.com`)
+- `R2_REGION` (`auto`)
+
+Admin yazı formunda içerik görselleri ve kapak görselleri aynı endpoint üzerinden yüklenir.
+
+### Upload Güvenliği
+
+- Upload endpoint'i varsayılan olarak admin oturumu ister (`UPLOAD_REQUIRE_ADMIN=true`).
+- Upload işlemlerine ayrı rate-limit uygulanır (`UPLOAD_RATE_LIMIT_WINDOW_SEC`, `UPLOAD_RATE_LIMIT_MAX`).
+- Opsiyonel malware taraması için ClamAV desteği vardır:
+  - `UPLOAD_MALWARE_SCAN=clamav`
+  - `CLAMAV_HOST`, `CLAMAV_PORT`, `CLAMAV_TIMEOUT_MS`
+  - Scanner erişilemiyorsa davranış `UPLOAD_MALWARE_FAIL_OPEN` ile belirlenir.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

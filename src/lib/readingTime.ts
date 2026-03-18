@@ -1,3 +1,5 @@
+import { getContentText } from "./content";
+
 const WORDS_PER_MINUTE = 220;
 
 export function getReadingTime(text: string) {
@@ -11,9 +13,10 @@ export function getReadingTime(text: string) {
 }
 
 export function formatReadingTime(text: string) {
-  if (!text.trim()) {
+  const normalized = getContentText(text);
+  if (!normalized.trim()) {
     return "";
   }
-  const { minutes } = getReadingTime(text);
+  const { minutes } = getReadingTime(normalized);
   return `${minutes} dk okuma`;
 }

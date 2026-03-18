@@ -51,7 +51,7 @@ export default async function AdminPostsPage() {
               <div className={styles.info}>
                 <p className={styles.title}>{post.title}</p>
                 <span className={styles.meta}>
-                  {formatDate(post.createdAt)} · {statusLabel(post.status)}
+                  {formatDate(post.createdAt, true)} · {statusLabel(post.status)}
                 </span>
               </div>
               <div className={styles.actions}>

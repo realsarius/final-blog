@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-if [ ! -d "node_modules" ] || [ ! -d "node_modules/sonner" ]; then
+if [ ! -d "node_modules" ] || [ ! -d "node_modules/sonner" ] || [ ! -d "node_modules/@editorjs/editorjs" ] || [ ! -d "node_modules/isomorphic-dompurify" ]; then
   echo "node_modules eksik, npm ci çalıştırılıyor..."
   npm ci
 fi

@@ -6,8 +6,10 @@
   position: relative;
   background: var(--bg);
   /* overflow: hidden kaldırıldı — heroCard aşağı taşıyor */
+  --hero-section-height: clamp(320px, 42vw, 620px);
+  height: var(--hero-section-height);
   padding-bottom: var(--space-6);
-  transition: padding 180ms ease;
+  transition: height 320ms ease, padding-bottom 180ms ease;
   --hero-title-size: clamp(60px, 11vw, 148px);
 }
 
@@ -137,7 +139,9 @@
 }
 
 :global(html.is-scrolled) .heroSection {
+  --hero-section-height: 300px;
   padding-bottom: var(--space-3);
+  --hero-title-size: clamp(48px, 9vw, 120px);
 }
 
 :global(html.is-scrolled) .heroInner {
@@ -148,9 +152,6 @@
   padding-bottom: var(--space-3);
 }
 
-:global(html.is-scrolled) .heroSection {
-  --hero-title-size: clamp(48px, 9vw, 120px);
-}
 
 .sidebarStack {
   display: flex;

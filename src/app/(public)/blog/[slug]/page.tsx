@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { formatDate } from "@/lib/format";
 import { formatReadingTime } from "@/lib/readingTime";
+import EditorRenderer from "@/components/EditorRenderer";
 import styles from "./page.module.css";
 import type { Metadata } from "next";
 
@@ -44,9 +45,6 @@ export default async function BlogDetailPage({ params }: PageProps) {
   const categories = post.categories.map((item) => item.category.name).join(", ");
   const tags = post.tags.map((item) => item.tag.name).join(", ");
   const readingTime = formatReadingTime(post.content);
-  const paragraphs = post.content
-    ? post.content.split(/\n\n+/).map((block) => block.trim())
-    : [];
 
   return (
     <article className={styles.page}>
@@ -63,13 +61,7 @@ export default async function BlogDetailPage({ params }: PageProps) {
         </header>
 
         <section className={styles.content}>
-          {paragraphs.length === 0 ? (
-            <p>İçerik yakında eklenecek.</p>
-          ) : (
-            paragraphs.map((paragraph, index) => (
-              <p key={index}>{paragraph}</p>
-            ))
-          )}
+          <EditorRenderer content={post.content} />
         </section>
 
         {tags ? (

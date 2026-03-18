@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { formatDate } from "@/lib/format";
+import { getContentText } from "@/lib/content";
 import styles from "./ArticleCard.module.css";
 
 interface ArticleCardProps {
@@ -25,18 +26,10 @@ export default function ArticleCard({
 }: ArticleCardProps) {
   const categoryName = post.categories[0]?.category.name ?? null;
   const hasImage = Boolean(post.coverImageUrl);
-  const rawContent = post.content ?? "";
-  const fallbackExcerpt = rawContent
-    .replace(/```[\s\S]*?```/g, " ")
-    .replace(/`[^`]*`/g, " ")
-    .replace(/!\[[^\]]*]\([^)]+\)/g, " ")
-    .replace(/\[[^\]]*]\([^)]+\)/g, " ")
-    .replace(/[#>*_~\\-|]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-  const excerptText =
-    post.excerpt?.trim() ||
-    (fallbackExcerpt.length > 0 ? fallbackExcerpt.slice(0, 240) : null);
+  const fallbackExcerpt = getContentText(post.content ?? "");
+  const manualExcerpt = getContentText(post.excerpt ?? "");
+  const excerptSource = manualExcerpt || fallbackExcerpt;
+  const excerptText = excerptSource.length > 0 ? `${excerptSource.slice(0, 240).trim()}...` : null;
 
   return (
     <article className={`${styles.card} ${hasImage ? styles.hasImage : styles.noImage}`}>

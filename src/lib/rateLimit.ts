@@ -1,7 +1,7 @@
 import { createClient } from "redis";
 
-const WINDOW_SECONDS = Number(process.env.RATE_LIMIT_WINDOW_SEC ?? 900);
-const MAX_ATTEMPTS = Number(process.env.RATE_LIMIT_MAX ?? 5);
+const DEFAULT_WINDOW_SECONDS = Number(process.env.RATE_LIMIT_WINDOW_SEC ?? 900);
+const DEFAULT_MAX_ATTEMPTS = Number(process.env.RATE_LIMIT_MAX ?? 5);
 
 type MemoryEntry = { count: number; reset: number };
 
@@ -34,12 +34,30 @@ async function getRedisClient() {
   return client;
 }
 
-export async function rateLimit(key: string) {
+type RateLimitOptions = {
+  windowSeconds?: number;
+  maxAttempts?: number;
+  namespace?: string;
+};
+
+function toPositiveInteger(value: unknown, fallback: number) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : fallback;
+}
+
+export async function rateLimit(
+  key: string,
+  options: RateLimitOptions = {},
+) {
+  const windowSeconds = toPositiveInteger(options.windowSeconds, DEFAULT_WINDOW_SECONDS);
+  const maxAttempts = toPositiveInteger(options.maxAttempts, DEFAULT_MAX_ATTEMPTS);
+  const namespace = options.namespace?.trim() || "default";
+  const scopedKey = `${namespace}:${key}`;
   const now = Date.now();
   const redis = await getRedisClient();
 
   if (redis) {
-    const redisKey = `ratelimit:${key}`;
+    const redisKey = `ratelimit:${scopedKey}`;
     const pipeline = redis.multi();
     pipeline.incr(redisKey);
     pipeline.ttl(redisKey);
@@ -48,31 +66,31 @@ export async function rateLimit(key: string) {
     const ttl = Number(results?.[1] ?? -1);
 
     if (count === 1 || ttl === -1) {
-      await redis.expire(redisKey, WINDOW_SECONDS);
+      await redis.expire(redisKey, windowSeconds);
     }
 
-    const remaining = Math.max(0, MAX_ATTEMPTS - count);
+    const remaining = Math.max(0, maxAttempts - count);
     return {
-      allowed: count <= MAX_ATTEMPTS,
+      allowed: count <= maxAttempts,
       remaining,
-      reset: now + (ttl > 0 ? ttl * 1000 : WINDOW_SECONDS * 1000),
+      reset: now + (ttl > 0 ? ttl * 1000 : windowSeconds * 1000),
     };
   }
 
   const store = getMemoryStore();
-  const entry = store.get(key);
+  const entry = store.get(scopedKey);
   if (!entry || entry.reset < now) {
-    const newEntry = { count: 1, reset: now + WINDOW_SECONDS * 1000 };
-    store.set(key, newEntry);
-    return { allowed: true, remaining: MAX_ATTEMPTS - 1, reset: newEntry.reset };
+    const newEntry = { count: 1, reset: now + windowSeconds * 1000 };
+    store.set(scopedKey, newEntry);
+    return { allowed: true, remaining: maxAttempts - 1, reset: newEntry.reset };
   }
 
   entry.count += 1;
-  store.set(key, entry);
+  store.set(scopedKey, entry);
 
   return {
-    allowed: entry.count <= MAX_ATTEMPTS,
-    remaining: Math.max(0, MAX_ATTEMPTS - entry.count),
+    allowed: entry.count <= maxAttempts,
+    remaining: Math.max(0, maxAttempts - entry.count),
     reset: entry.reset,
   };
 }

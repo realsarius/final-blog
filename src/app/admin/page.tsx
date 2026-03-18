@@ -64,7 +64,7 @@ export default async function AdminPage() {
                 <div>
                   <p className={styles.title}>{post.title}</p>
                   <span className={styles.meta}>
-                    {formatDate(post.createdAt)} · {statusLabel(post.status)}
+                    {formatDate(post.createdAt, true)} · {statusLabel(post.status)}
                   </span>
                 </div>
                 <Link className={styles.sectionLink} href={`/admin/posts/${post.id}/edit`}>

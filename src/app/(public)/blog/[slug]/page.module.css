@@ -35,6 +35,23 @@
   color: var(--text);
 }
 
+.content figure {
+  margin: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.content img {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+}
+
+.content figcaption {
+  font-size: 13px;
+  color: var(--muted);
+}
+
 .footer {
   margin-top: var(--space-6);
   padding-top: var(--space-4);
