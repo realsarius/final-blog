@@ -1,0 +1,179 @@
+import { getServerSession } from "next-auth";
+import { NextResponse } from "next/server";
+import { authOptions } from "@/lib/auth";
+import { scanForMalware } from "@/lib/malwareScan";
+import { getClientIp, rateLimit } from "@/lib/rateLimit";
+import { sanitizeUploadFolder, uploadImage } from "@/lib/uploadStorage";
+
+const MAX_FILE_SIZE = 6 * 1024 * 1024;
+const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+
+function parseBoolean(value: string | undefined, fallback: boolean) {
+  if (value === undefined) {
+    return fallback;
+  }
+  const normalized = value.trim().toLowerCase();
+  if (["1", "true", "yes", "on"].includes(normalized)) {
+    return true;
+  }
+  if (["0", "false", "no", "off"].includes(normalized)) {
+    return false;
+  }
+  return fallback;
+}
+
+function parsePositiveInt(value: string | undefined, fallback: number) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : fallback;
+}
+
+function detectImageMime(buffer: Buffer): string | null {
+  if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
+    return "image/jpeg";
+  }
+
+  if (
+    buffer.length >= 8
+    && buffer[0] === 0x89
+    && buffer[1] === 0x50
+    && buffer[2] === 0x4e
+    && buffer[3] === 0x47
+    && buffer[4] === 0x0d
+    && buffer[5] === 0x0a
+    && buffer[6] === 0x1a
+    && buffer[7] === 0x0a
+  ) {
+    return "image/png";
+  }
+
+  if (
+    buffer.length >= 6
+    && buffer[0] === 0x47
+    && buffer[1] === 0x49
+    && buffer[2] === 0x46
+    && buffer[3] === 0x38
+    && (buffer[4] === 0x39 || buffer[4] === 0x37)
+    && buffer[5] === 0x61
+  ) {
+    return "image/gif";
+  }
+
+  if (
+    buffer.length >= 12
+    && buffer[0] === 0x52
+    && buffer[1] === 0x49
+    && buffer[2] === 0x46
+    && buffer[3] === 0x46
+    && buffer[8] === 0x57
+    && buffer[9] === 0x45
+    && buffer[10] === 0x42
+    && buffer[11] === 0x50
+  ) {
+    return "image/webp";
+  }
+
+  return null;
+}
+
+export async function handleUploadPost(request: Request) {
+  const requireAdmin = parseBoolean(process.env.UPLOAD_REQUIRE_ADMIN, true);
+  const session = await getServerSession(authOptions);
+  const userId = session?.user?.id;
+  const userRole = session?.user?.role;
+
+  if (requireAdmin) {
+    if (!userId) {
+      return NextResponse.json({ success: 0, error: "Oturum gerekli." }, { status: 401 });
+    }
+    if (userRole !== "ADMIN") {
+      return NextResponse.json({ success: 0, error: "Bu işlem için yetkiniz yok." }, { status: 403 });
+    }
+  }
+
+  const rateLimitMax = parsePositiveInt(process.env.UPLOAD_RATE_LIMIT_MAX, 30);
+  const rateLimitWindow = parsePositiveInt(process.env.UPLOAD_RATE_LIMIT_WINDOW_SEC, 60);
+  if (rateLimitMax > 0) {
+    const ip = getClientIp({ headers: request.headers });
+    const limiterKey = userId ? `user:${userId}` : `ip:${ip}`;
+    const limiter = await rateLimit(limiterKey, {
+      namespace: "upload",
+      maxAttempts: rateLimitMax,
+      windowSeconds: rateLimitWindow,
+    });
+
+    if (!limiter.allowed) {
+      const retryAfterSeconds = Math.max(1, Math.ceil((limiter.reset - Date.now()) / 1000));
+      return NextResponse.json(
+        { success: 0, error: `Çok fazla yükleme denemesi. ${retryAfterSeconds} saniye sonra tekrar deneyin.` },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": String(retryAfterSeconds),
+          },
+        },
+      );
+    }
+  }
+
+  const formData = await request.formData();
+  const file = formData.get("file");
+  const folderField = formData.get("folder");
+  const folder = sanitizeUploadFolder(typeof folderField === "string" ? folderField : undefined);
+
+  if (!file || !(file instanceof File)) {
+    return NextResponse.json({ success: 0, error: "Dosya bulunamadı." }, { status: 400 });
+  }
+
+  if (!ALLOWED_TYPES.has(file.type)) {
+    return NextResponse.json({ success: 0, error: "Desteklenmeyen dosya." }, { status: 400 });
+  }
+
+  if (file.size > MAX_FILE_SIZE) {
+    return NextResponse.json({ success: 0, error: "Dosya boyutu çok büyük." }, { status: 400 });
+  }
+
+  try {
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const detectedMime = detectImageMime(buffer);
+    if (!detectedMime || !ALLOWED_TYPES.has(detectedMime)) {
+      return NextResponse.json(
+        { success: 0, error: "Dosya içeriği geçerli bir görsel değil." },
+        { status: 400 },
+      );
+    }
+
+    if (file.type && file.type !== detectedMime) {
+      return NextResponse.json(
+        { success: 0, error: "MIME bilgisi dosya içeriğiyle uyuşmuyor." },
+        { status: 400 },
+      );
+    }
+
+    const scanResult = await scanForMalware(buffer);
+    if (scanResult.status === "infected") {
+      return NextResponse.json(
+        { success: 0, error: `Dosya zararlı olarak işaretlendi (${scanResult.signature}).` },
+        { status: 400 },
+      );
+    }
+
+    const uploaded = await uploadImage({
+      buffer,
+      mimeType: detectedMime,
+      folder,
+    });
+
+    return NextResponse.json({
+      success: 1,
+      file: {
+        url: uploaded.url,
+      },
+    });
+  } catch (error) {
+    console.error("Upload failed:", error);
+    return NextResponse.json(
+      { success: 0, error: "Yükleme sırasında bir hata oluştu." },
+      { status: 500 },
+    );
+  }
+}
