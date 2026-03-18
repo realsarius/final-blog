@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Space_Grotesk } from "next/font/google";
+import { Space_Grotesk, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { getSiteUrl } from "@/lib/seo";
 import { Toaster } from "sonner";
@@ -7,6 +7,13 @@ import { Toaster } from "sonner";
 const spaceGrotesk = Space_Grotesk({
   variable: "--font-space-grotesk",
   subsets: ["latin"],
+});
+
+const playfairDisplay = Playfair_Display({
+  variable: "--font-playfair",
+  subsets: ["latin"],
+  weight: ["400", "700", "900"],
+  style: ["normal", "italic"],
 });
 
 export const metadata: Metadata = {
@@ -32,7 +39,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="tr">
-      <body className={spaceGrotesk.variable}>
+      <body className={`${spaceGrotesk.variable} ${playfairDisplay.variable}`}>
         {children}
         <Toaster richColors closeButton position="top-right" />
       </body>

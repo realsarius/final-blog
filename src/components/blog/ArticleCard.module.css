@@ -1,0 +1,133 @@
+.card {
+  display: grid;
+  gap: var(--space-5);
+  padding: var(--space-5) 0;
+  border-bottom: 1px solid var(--line);
+  align-items: start;
+}
+
+.card:first-child {
+  padding-top: 0;
+}
+
+.hasImage {
+  grid-template-columns: 220px 1fr;
+}
+
+.noImage {
+  grid-template-columns: 1fr;
+}
+
+.imageWrap {
+  display: block;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  aspect-ratio: 3 / 4;
+  background: var(--line);
+  flex-shrink: 0;
+}
+
+.image {
+  width: 120%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  transform: scale(1.02);
+  transition: transform 300ms ease;
+}
+
+.card:hover .image {
+  transform: scale(1.12);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.category {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.latest {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent-dark);
+  font-weight: 700;
+}
+
+.title {
+  font-family: var(--font-serif);
+  font-size: clamp(18px, 2vw, 23px);
+  line-height: 1.25;
+  font-weight: 700;
+}
+
+.title a {
+  color: var(--text);
+  transition: color 140ms ease;
+}
+
+.title a:hover {
+  color: var(--accent-dark);
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: 12px;
+  color: var(--muted);
+  letter-spacing: 0.03em;
+}
+
+.meta span + span::before {
+  content: "•";
+  margin-right: var(--space-3);
+  color: var(--line);
+}
+
+.excerpt {
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.readMore {
+  margin-top: auto;
+  padding-top: var(--space-2);
+  font-size: 12px;
+  color: var(--accent);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  width: fit-content;
+  border-bottom: 1px solid transparent;
+  transition: border-color 140ms ease, color 140ms ease;
+}
+
+.readMore:hover {
+  border-bottom-color: var(--accent);
+  color: var(--accent-dark);
+}
+
+@media (max-width: 600px) {
+  .card {
+    grid-template-columns: 1fr;
+  }
+
+  .imageWrap {
+    aspect-ratio: 16 / 9;
+  }
+}

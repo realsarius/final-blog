@@ -1,14 +1,20 @@
 :root {
-  --bg: #f7f2ea;
-  --surface: #fff9f0;
-  --text: #2b241b;
-  --muted: #6a5c4f;
-  --accent: #c15a2d;
-  --accent-dark: #9e461f;
-  --line: #e3d8ca;
-  --shadow-soft: 0 2px 8px rgba(36, 27, 19, 0.08);
-  --radius-sm: 6px;
-  --radius-md: 10px;
+  --font-serif: var(--font-playfair), "Playfair Display", Georgia, serif;
+  --font-sans: var(--font-space-grotesk), "Space Grotesk", sans-serif;
+
+  --bg: #f5f0e8;
+  --surface: #faf7f2;
+  --surface-dark: #2e3a2a;
+  --text: #1c1c1a;
+  --text-light: #faf7f2;
+  --muted: #5a5a50;
+  --accent: #6b7c4d;
+  --accent-dark: #4e5c36;
+  --accent-hover: #7d9059;
+  --line: #ddd8cc;
+  --shadow-soft: 0 2px 12px rgba(28, 28, 26, 0.06);
+  --radius-sm: 4px;
+  --radius-md: 8px;
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -35,9 +41,9 @@ body {
   color: var(--text);
   background-color: var(--bg);
   background-image:
-    radial-gradient(900px 600px at 10% -10%, rgba(193, 90, 45, 0.08), transparent 60%),
-    radial-gradient(800px 500px at 90% 0%, rgba(89, 63, 46, 0.08), transparent 55%);
-  font-family: var(--font-space-grotesk), "Space Grotesk", sans-serif;
+    radial-gradient(900px 600px at 10% -10%, rgba(107, 124, 77, 0.07), transparent 60%),
+    radial-gradient(800px 500px at 90% 0%, rgba(46, 58, 42, 0.05), transparent 55%);
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -62,7 +68,7 @@ main {
 }
 
 .container {
-  max-width: 1080px;
+  max-width: 1140px;
   margin: 0 auto;
   padding: 0 var(--space-5);
 }

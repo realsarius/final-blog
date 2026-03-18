@@ -1,28 +1,17 @@
 import Link from "next/link";
 import styles from "./SiteHeader.module.css";
 
-const links = [
-  { href: "/", label: "Ana Sayfa" },
-  { href: "/blog", label: "Yazılar" },
-  { href: "/about", label: "Hakkımda" },
-  { href: "/contact", label: "İletişim" },
-  { href: "/privacy", label: "Gizlilik" },
-];
-
 export default function SiteHeader() {
   return (
     <header className={styles.header}>
       <div className={`container ${styles.inner}`}>
+        <div className={styles.meta}>Est. 2026</div>
         <Link className={styles.brand} href="/">
-          Berkan’ın Notları
+          Berkan&apos;ın Notları
         </Link>
-        <nav className={styles.nav} aria-label="Site">
-          {links.map((link) => (
-            <Link key={link.href} className={styles.link} href={link.href}>
-              {link.label}
-            </Link>
-          ))}
-        </nav>
+        <div className={styles.actions}>
+          <Link href="/contact">İletişim</Link>
+        </div>
       </div>
     </header>
   );

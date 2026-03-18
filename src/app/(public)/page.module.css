@@ -1,72 +1,183 @@
-.page {
+.page {}
+
+/* ── Hero ─────────────────────────────────────────── */
+
+.heroSection {
+  position: relative;
+  background: var(--bg);
+  /* overflow: hidden kaldırıldı — heroCard aşağı taşıyor */
+  padding-bottom: var(--space-6);
+  transition: padding 180ms ease;
+  --hero-title-size: clamp(60px, 11vw, 148px);
+}
+
+/* Ghost watermark — absolute, tüm hero'yu kaplar */
+.heroGhost {
+  font-family: var(--font-serif);
+  font-size: clamp(80px, 15vw, 210px);
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  line-height: 0.88;
+  color: var(--line);
+  position: absolute;
+  inset: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--space-8);
-}
-
-.intro {
-  padding: var(--space-8) 0 var(--space-6);
-}
-
-.title {
-  font-size: clamp(28px, 4vw, 40px);
-  line-height: 1.1;
-  letter-spacing: -0.5px;
-  margin-bottom: var(--space-4);
-}
-
-.lead {
-  max-width: 640px;
-  font-size: 16px;
-  line-height: 1.7;
-  color: var(--muted);
-}
-
-.topics {
-  margin-top: var(--space-5);
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-  font-size: 14px;
-  color: var(--muted);
-  list-style: none;
-}
-
-.topics li::after {
-  content: \"•\";
-  margin-left: var(--space-3);
-  color: var(--line);
-}
-
-.topics li:last-child::after {
-  content: \"\";
-  margin-left: 0;
-}
-
-.section {
-  padding-bottom: var(--space-8);
-}
-
-.sectionHeader {
-  display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4);
+  justify-content: center;
+  text-align: center;
+  user-select: none;
+  pointer-events: none;
+  z-index: 0;
+  height: max-content;
+}
+
+/* Hero içerik — tek sütun, metin sol hizalı */
+.heroInner {
+  position: relative;
+  z-index: 1;
+  padding-top: var(--space-7);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: var(--space-8);
+  align-items: start;
+  transition: padding 180ms ease;
+}
+
+.heroText {
+  padding-bottom: var(--space-5);
+  min-width: 0;
+  transition: padding 180ms ease;
+}
+
+/* Fotoğraf/gradient kırpılmış büyük metin */
+.heroClipped {
+  font-family: var(--font-serif);
+  font-size: var(--hero-title-size);
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  line-height: 0.88;
+  transition: font-size 180ms ease;
+  background-image: linear-gradient(
+    145deg,
+    #8fa06a 0%,
+    #6b7c4d 25%,
+    #2e3a2a 55%,
+    #4e5c36 80%,
+    #7d9059 100%
+  );
+  background-size: cover;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  width: max-content;
+}
+
+.heroAuthor {
+  display: block;
+  position: relative;
+  transform: translateY(128px);
+  z-index: 2;
+  opacity: 1;
+  transition: transform 450ms ease-in-out, opacity 450ms ease-in-out;
+}
+
+/* ── Kategori Nav altında içerik grid ─────────────── */
+
+.contentGrid {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: var(--space-8);
+  padding: var(--space-6) 0 var(--space-8);
+  align-items: start;
+}
+
+.mainCol {
+  min-width: 0;
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  position: sticky;
+  top: var(--space-6);
+  transform: translateY(128px);
+  transition: transform 160ms ease;
+}
+
+.sidebarAuthor {
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(24px);
+  pointer-events: none;
+  transition: max-height 450ms ease-in-out, opacity 450ms ease-in-out, transform 450ms ease-in-out;
+}
+
+:global(html.is-scrolled) .heroAuthor {
+  opacity: 0;
+  transform: translateY(160px);
+  pointer-events: none;
+}
+
+:global(html.is-scrolled) .sidebarAuthor {
+  max-height: 520px;
+  transform: translateY(0);
+  opacity: 1;
+  pointer-events: auto;
   margin-bottom: var(--space-5);
 }
 
-.sectionHeader h2 {
-  font-size: 20px;
+:global(html.is-scrolled) .sidebar {
+  transform: translateY(0);
 }
 
-.sectionLink {
-  font-size: 14px;
-  color: var(--accent-dark);
-  border-bottom: 1px solid transparent;
+:global(html.is-scrolled) .heroSection {
+  padding-bottom: var(--space-3);
 }
 
-.sectionLink:hover {
-  border-bottom-color: var(--accent-dark);
+:global(html.is-scrolled) .heroInner {
+  padding-top: var(--space-4);
+}
+
+:global(html.is-scrolled) .heroText {
+  padding-bottom: var(--space-3);
+}
+
+:global(html.is-scrolled) .heroSection {
+  --hero-title-size: clamp(48px, 9vw, 120px);
+}
+
+.sidebarStack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+/* ── Section header ───────────────────────────────── */
+
+.sectionHeader {
+  margin-bottom: var(--space-4);
+  padding-bottom: var(--space-3);
+  border-bottom: 2px solid var(--text);
+}
+
+.sectionTitle {
+  font-family: var(--font-serif);
+  font-size: 15px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text);
+}
+
+.articles {
+  display: flex;
+  flex-direction: column;
 }
 
 .empty {
@@ -75,50 +186,38 @@
   background: var(--surface);
   border-radius: var(--radius-md);
   color: var(--muted);
-  display: grid;
-  gap: var(--space-2);
-}
-
-.postGrid {
-  display: grid;
-  gap: var(--space-5);
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-}
-
-.card {
-  padding: var(--space-5);
-  border: 1px solid var(--line);
-  background: var(--surface);
-  border-radius: var(--radius-md);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
-.cardMeta {
-  font-size: 13px;
-  color: var(--muted);
-}
-
-.cardTitle {
-  font-size: 18px;
-  line-height: 1.3;
-}
-
-.cardExcerpt {
   font-size: 14px;
-  color: var(--muted);
-  line-height: 1.6;
 }
 
-.cardLink {
-  margin-top: auto;
-  font-size: 14px;
-  color: var(--accent-dark);
-  border-bottom: 1px solid transparent;
-  width: fit-content;
-}
+/* ── Responsive ───────────────────────────────────── */
 
-.cardLink:hover {
-  border-bottom-color: var(--accent-dark);
+@media (max-width: 900px) {
+  .heroInner {
+    grid-template-columns: 1fr;
+  }
+
+  .heroCard {
+    max-width: 320px;
+  }
+
+  .contentGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    position: static;
+  }
+
+  .heroAuthor {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .sidebarAuthor {
+    max-height: 520px;
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+    margin-bottom: var(--space-5);
+  }
 }
