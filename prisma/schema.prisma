@@ -26,9 +26,12 @@ model User {
   firstName    String
   lastName     String
   email        String   @unique
+  username     String?  @unique
   passwordHash String
   role         Role     @default(ADMIN)
   isActive     Boolean  @default(true)
+  bio          String?
+  avatarUrl    String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -36,32 +39,43 @@ model User {
 }
 
 model Post {
-  id            String      @id @default(cuid())
-  title         String
-  slug          String      @unique
-  excerpt       String?
-  content       String
-  coverImageUrl String?
-  status        PostStatus  @default(DRAFT)
-  publishedAt   DateTime?
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  id              String      @id @default(cuid())
+  title           String
+  slug            String      @unique
+  excerpt         String?
+  content         String
+  coverImageUrl   String?
+  status          PostStatus  @default(DRAFT)
+  publishedAt     DateTime?
+  featured        Boolean     @default(false)
+  readingTime     Int?
+  metaTitle       String?
+  metaDescription String?
+  ogImageUrl      String?
+  canonicalUrl    String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
 
   author   User   @relation(fields: [authorId], references: [id])
   authorId String
 
   categories PostCategory[]
   tags       PostTag[]
+  views      PostView[]
 }
 
 model Category {
-  id        String   @id @default(cuid())
-  name      String
-  slug      String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  parentId    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  posts PostCategory[]
+  parent   Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children Category[] @relation("CategoryHierarchy")
+  posts    PostCategory[]
 }
 
 model Tag {
@@ -92,4 +106,14 @@ model PostTag {
   tag  Tag  @relation(fields: [tagId], references: [id])
 
   @@id([postId, tagId])
+}
+
+model PostView {
+  id       String   @id @default(cuid())
+  postId   String
+  viewedAt DateTime @default(now())
+
+  post Post @relation(fields: [postId], references: [id])
+
+  @@index([postId])
 }

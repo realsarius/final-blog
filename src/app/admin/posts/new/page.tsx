@@ -7,6 +7,7 @@ import { authOptions } from "@/lib/auth";
 import { getFirstErrorMessage, postSchema, splitCommaList } from "@/lib/validation";
 import styles from "../post-form.module.css";
 import MarkdownField from "../MarkdownField";
+import TaxonomyPicker from "../TaxonomyPicker";
 
 async function generateUniquePostSlug(base: string) {
   let slug = base;
@@ -90,11 +91,21 @@ async function createPost(formData: FormData) {
   redirect(`/admin/posts?success=${encodeURIComponent("Yazı oluşturuldu.")}`);
 }
 
-export default function NewPostPage({
+export default async function NewPostPage({
   searchParams,
 }: {
-  searchParams?: { error?: string };
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  const resolvedSearchParams = (await searchParams) ?? {};
+  const error =
+    typeof resolvedSearchParams.error === "string"
+      ? resolvedSearchParams.error
+      : undefined;
+  const [categories, tags] = await Promise.all([
+    prisma.category.findMany({ orderBy: { name: "asc" } }),
+    prisma.tag.findMany({ orderBy: { name: "asc" } }),
+  ]);
+
   return (
     <div className={styles.page}>
       <header className={styles.header}>
@@ -102,9 +113,7 @@ export default function NewPostPage({
         <p>Başlık, içerik ve kategori bilgilerini girerek yeni yazı oluştur.</p>
       </header>
 
-      {searchParams?.error ? (
-        <p className={styles.error}>{searchParams.error}</p>
-      ) : null}
+      {error ? <p className={styles.error}>{error}</p> : null}
 
       <form className={styles.form} action={createPost}>
         <div className={styles.field}>
@@ -137,14 +146,18 @@ export default function NewPostPage({
         </div>
 
         <div className={styles.row}>
-          <div className={styles.field}>
-            <label htmlFor="categories">Kategoriler (virgülle)</label>
-            <input id="categories" name="categories" placeholder="ör. ürün, yazılım" />
-          </div>
-          <div className={styles.field}>
-            <label htmlFor="tags">Etiketler (virgülle)</label>
-            <input id="tags" name="tags" placeholder="ör. nextjs, prisma" />
-          </div>
+          <TaxonomyPicker
+            label="Kategoriler"
+            name="categories"
+            options={categories.map((item) => item.name)}
+            placeholder="Kategori ara veya ekle..."
+          />
+          <TaxonomyPicker
+            label="Etiketler"
+            name="tags"
+            options={tags.map((item) => item.name)}
+            placeholder="Etiket ara veya ekle..."
+          />
         </div>
 
         <div className={styles.field}>

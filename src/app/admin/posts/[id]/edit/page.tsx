@@ -7,6 +7,7 @@ import { authOptions } from "@/lib/auth";
 import { getFirstErrorMessage, postSchema, splitCommaList } from "@/lib/validation";
 import styles from "../../post-form.module.css";
 import MarkdownField from "../../MarkdownField";
+import TaxonomyPicker from "../../TaxonomyPicker";
 
 async function generateUniquePostSlug(base: string, currentId: string) {
   let slug = base;
@@ -110,25 +111,35 @@ async function updatePost(formData: FormData) {
 }
 
 interface PageProps {
-  params: { id: string };
-  searchParams?: { error?: string };
+  params: Promise<{ id: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }
 
 export default async function EditPostPage({ params, searchParams }: PageProps) {
-  const post = await prisma.post.findUnique({
-    where: { id: params.id },
-    include: {
-      categories: { include: { category: true } },
-      tags: { include: { tag: true } },
-    },
-  });
+  const resolvedParams = await params;
+  const resolvedSearchParams = (await searchParams) ?? {};
+  const error =
+    typeof resolvedSearchParams.error === "string"
+      ? resolvedSearchParams.error
+      : undefined;
+  const [post, categories, tags] = await Promise.all([
+    prisma.post.findUnique({
+      where: { id: resolvedParams.id },
+      include: {
+        categories: { include: { category: true } },
+        tags: { include: { tag: true } },
+      },
+    }),
+    prisma.category.findMany({ orderBy: { name: "asc" } }),
+    prisma.tag.findMany({ orderBy: { name: "asc" } }),
+  ]);
 
   if (!post) {
     notFound();
   }
 
-  const categoryList = post.categories.map((item) => item.category.name).join(", ");
-  const tagList = post.tags.map((item) => item.tag.name).join(", ");
+  const categoryList = post.categories.map((item) => item.category.name);
+  const tagList = post.tags.map((item) => item.tag.name);
 
   return (
     <div className={styles.page}>
@@ -137,9 +148,7 @@ export default async function EditPostPage({ params, searchParams }: PageProps) 
         <p>Mevcut içeriği güncelle ve değişiklikleri kaydet.</p>
       </header>
 
-      {searchParams?.error ? (
-        <p className={styles.error}>{searchParams.error}</p>
-      ) : null}
+      {error ? <p className={styles.error}>{error}</p> : null}
 
       <form className={styles.form} action={updatePost}>
         <input type="hidden" name="id" value={post.id} />
@@ -174,14 +183,20 @@ export default async function EditPostPage({ params, searchParams }: PageProps) 
         </div>
 
         <div className={styles.row}>
-          <div className={styles.field}>
-            <label htmlFor="categories">Kategoriler (virgülle)</label>
-            <input id="categories" name="categories" defaultValue={categoryList} />
-          </div>
-          <div className={styles.field}>
-            <label htmlFor="tags">Etiketler (virgülle)</label>
-            <input id="tags" name="tags" defaultValue={tagList} />
-          </div>
+          <TaxonomyPicker
+            label="Kategoriler"
+            name="categories"
+            options={categories.map((item) => item.name)}
+            defaultSelected={categoryList}
+            placeholder="Kategori ara veya ekle..."
+          />
+          <TaxonomyPicker
+            label="Etiketler"
+            name="tags"
+            options={tags.map((item) => item.name)}
+            defaultSelected={tagList}
+            placeholder="Etiket ara veya ekle..."
+          />
         </div>
 
         <div className={styles.field}>
