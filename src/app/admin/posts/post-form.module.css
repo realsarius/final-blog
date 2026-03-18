@@ -48,11 +48,398 @@
   resize: vertical;
 }
 
+.coverUploadRow {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--space-2);
+}
+
+.coverUploadAction {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: #f4efe6;
+  color: var(--text);
+  padding: 10px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.coverUploadAction:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.coverFileInput {
+  display: none;
+}
+
 .markdownField {
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   background: var(--surface);
   overflow: hidden;
+}
+
+.editorShell {
+  display: grid;
+  gap: 0;
+}
+
+.editorTabs {
+  display: flex;
+  align-items: end;
+  gap: 6px;
+  border-bottom: 1px solid var(--line);
+  padding: 0 6px;
+}
+
+.editorTab {
+  border: 1px solid var(--line);
+  border-bottom: none;
+  background: #f4efe6;
+  color: var(--muted);
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
+  padding: 8px 14px;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  transform: translateY(1px);
+}
+
+.editorTabActive {
+  color: var(--text);
+  background: var(--surface);
+  border-color: var(--line);
+}
+
+.editorBody {
+  display: grid;
+  gap: 0;
+}
+
+.panelHidden {
+  display: none;
+}
+
+.editorField {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  padding: 12px 16px 12px 44px;
+  min-height: 240px;
+  position: relative;
+}
+
+.editorHolder {
+  min-height: 220px;
+}
+
+.editorFloatingTools {
+  position: absolute;
+  left: 12px;
+  transform: translateY(-50%);
+  display: grid;
+  gap: 6px;
+  z-index: 12;
+  transition: opacity 0.15s ease;
+}
+
+.editorToolButton {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: #f8f3ea;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.editorToolButton:hover {
+  background: #f1e7d8;
+}
+
+.editorHint {
+  position: absolute;
+  right: 12px;
+  bottom: 10px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.editorField :global(.ce-block__content),
+.editorField :global(.ce-toolbar__content) {
+  max-width: none;
+  margin: 0;
+}
+
+.editorField :global(.ce-paragraph) {
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.editorField :global(.ce-header) {
+  margin: 12px 0 6px;
+}
+
+.editorField :global(.ce-block__content) {
+  border-radius: 8px;
+  padding: 4px 6px;
+  margin-left: -6px;
+  transition: background 0.15s ease;
+}
+
+.editorField :global(.ce-block__content:hover) {
+  background: #f7f2e9;
+}
+
+.editorField :global(.ce-code) {
+  position: relative;
+}
+
+.editorField :global(.ce-code__textarea),
+.editorField :global(.ce-quote__text),
+.editorField :global(.ce-quote__caption) {
+  border: 1px solid var(--line) !important;
+  border-radius: 8px;
+  background: #fffdfa;
+  color: var(--text);
+}
+
+.editorField :global(.ce-quote__text) {
+  min-height: 80px;
+}
+
+.editorField :global(.ce-code__textarea::placeholder),
+.editorField :global(.ce-quote__text::placeholder),
+.editorField :global(.ce-quote__caption::placeholder) {
+  color: #7c7a74;
+}
+
+.editorCodeDone {
+  position: absolute;
+  z-index: 12;
+  border: 1px solid var(--line);
+  background: #fff7ec;
+  color: var(--text);
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  box-shadow: var(--shadow-soft);
+}
+
+.editorCodeDone:hover {
+  background: #f3e7d6;
+}
+
+.editorField :global(.ce-toolbar__plus),
+.editorField :global(.ce-toolbar__settings-btn),
+.editorField :global(.ce-toolbar__settings) {
+  display: none !important;
+}
+
+.editorField :global(.ce-block.ce-block--drop-target .ce-block__content) {
+  box-shadow: 0 0 0 2px #d7c4a6 inset;
+  background: #f6efe3;
+}
+
+.editorMenu {
+  position: absolute;
+  width: 300px;
+  background: #fffdfa;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(25, 23, 18, 0.12);
+  z-index: 5;
+  overflow: hidden;
+  padding: 8px;
+}
+
+.editorMenuHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #f7f5f1;
+  margin-bottom: 8px;
+}
+
+.editorMenuSearchIcon {
+  color: #8a8f9b;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.editorMenuSearchInput {
+  border: none;
+  background: transparent;
+  width: 100%;
+  color: var(--text);
+  font-size: 14px;
+  outline: none;
+}
+
+.editorMenuSearchInput::placeholder {
+  color: #9095a3;
+}
+
+.editorMenuQuery {
+  font-family: "SFMono-Regular", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 11px;
+  color: var(--text);
+}
+
+.editorMenuList {
+  display: grid;
+  gap: 2px;
+  max-height: 300px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.editorMenuItem {
+  border: 1px solid transparent;
+  background: transparent;
+  text-align: left;
+  padding: 9px 10px;
+  border-radius: 9px;
+  cursor: pointer;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+}
+
+.editorMenuItem:hover {
+  background: #f1eee8;
+  border-color: #e0d8cb;
+}
+
+.editorMenuIcon {
+  min-width: 32px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #2b2b2b;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: "SFMono-Regular", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+.editorMenuTitle {
+  font-size: 16px;
+  line-height: 1.1;
+  color: var(--text);
+}
+
+.editorMenuDesc {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.editorMenuEmpty {
+  padding: 12px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.editorBlockMenu {
+  position: absolute;
+  width: 300px;
+  background: #fffdfa;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(25, 23, 18, 0.12);
+  z-index: 7;
+  padding: 8px;
+  display: grid;
+  gap: 8px;
+}
+
+.editorBlockMenuList {
+  display: grid;
+  gap: 2px;
+  max-height: 320px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.editorBlockMenuSeparator {
+  height: 1px;
+  background: #e8dfd1;
+  margin: 5px 6px;
+}
+
+.editorBlockMenuItem {
+  border: 1px solid transparent;
+  background: transparent;
+  text-align: left;
+  border-radius: 9px;
+  padding: 10px 10px;
+  font-size: 16px;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.editorBlockMenuItem:hover {
+  background: #f1eee8;
+  border-color: #e0d8cb;
+}
+
+.editorBlockMenuItemActive {
+  background: #dbe9f7;
+  border-color: #bad4ee;
+  color: #1f69b3;
+}
+
+.editorBlockMenuItemDanger {
+  color: #9f2f2f;
+}
+
+.editorBlockMenuIcon {
+  min-width: 28px;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  font-family: "SFMono-Regular", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 14px;
+  color: #2b2b2b;
+}
+
+:global(body.editor-dragging) {
+  cursor: grabbing;
+}
+
+.editorPreviewPane {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: #fffdfa;
+  overflow: hidden;
+}
+
+.editorPreviewTitle {
+  margin: 0;
+  padding: 10px 12px;
+  font-size: 12px;
+  color: var(--muted);
+  border-bottom: 1px solid var(--line);
+  background: #faf7f1;
 }
 
 .markdownToolbar {
@@ -103,6 +490,23 @@
 .markdownPreview h3 {
   font-size: 18px;
   margin-top: var(--space-3);
+}
+
+.markdownPreview figure {
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.markdownPreview img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.markdownPreview figcaption {
+  font-size: 13px;
+  color: var(--muted);
 }
 
 .markdownPreview ul,

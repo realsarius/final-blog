@@ -6,8 +6,9 @@ import { slugify } from "@/lib/slug";
 import { authOptions } from "@/lib/auth";
 import { getFirstErrorMessage, postSchema, splitCommaList } from "@/lib/validation";
 import styles from "../post-form.module.css";
-import MarkdownField from "../MarkdownField";
+import EditorField from "../EditorField";
 import TaxonomyPicker from "../TaxonomyPicker";
+import CoverImageField from "../CoverImageField";
 
 async function generateUniquePostSlug(base: string) {
   let slug = base;
@@ -19,11 +20,41 @@ async function generateUniquePostSlug(base: string) {
   return slug;
 }
 
+async function resolveAuthorId(userId?: string, userEmail?: string | null) {
+  const conditions: Array<{ id?: string; email?: string }> = [];
+  if (userId) {
+    conditions.push({ id: userId });
+  }
+  if (userEmail) {
+    conditions.push({ email: userEmail.toLowerCase() });
+  }
+  if (conditions.length === 0) {
+    return null;
+  }
+
+  const author = await prisma.user.findFirst({
+    where: {
+      OR: conditions,
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  return author?.id ?? null;
+}
+
 async function createPost(formData: FormData) {
   "use server";
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
+  if (!session?.user) {
     redirect("/login?callbackUrl=/admin/posts/new");
+  }
+  const authorId = await resolveAuthorId(session.user.id, session.user.email);
+  if (!authorId) {
+    redirect(
+      `/login?callbackUrl=/admin/posts/new&error=${encodeURIComponent("Oturum süresi dolmuş olabilir. Lütfen tekrar giriş yapın.")}`,
+    );
   }
 
   const title = formData.get("title")?.toString() ?? "";
@@ -63,7 +94,7 @@ async function createPost(formData: FormData) {
       coverImageUrl: validation.data.coverImageUrl || null,
       status,
       publishedAt: status === "PUBLISHED" ? new Date() : null,
-      authorId: session.user.id,
+      authorId,
       categories: {
         create: validation.data.categories.map((name) => ({
           category: {
@@ -142,7 +173,7 @@ export default async function NewPostPage({
 
         <div className={styles.field}>
           <label htmlFor="content">İçerik</label>
-          <MarkdownField name="content" required />
+          <EditorField name="content" />
         </div>
 
         <div className={styles.row}>
@@ -160,10 +191,7 @@ export default async function NewPostPage({
           />
         </div>
 
-        <div className={styles.field}>
-          <label htmlFor="coverImageUrl">Kapak Görseli URL</label>
-          <input id="coverImageUrl" name="coverImageUrl" />
-        </div>
+        <CoverImageField name="coverImageUrl" label="Kapak Görseli URL" />
 
         <div className={styles.actions}>
           <button className={styles.primary} type="submit">

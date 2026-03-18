@@ -6,8 +6,9 @@ import { slugify } from "@/lib/slug";
 import { authOptions } from "@/lib/auth";
 import { getFirstErrorMessage, postSchema, splitCommaList } from "@/lib/validation";
 import styles from "../../post-form.module.css";
-import MarkdownField from "../../MarkdownField";
+import EditorField from "../../EditorField";
 import TaxonomyPicker from "../../TaxonomyPicker";
+import CoverImageField from "../../CoverImageField";
 
 async function generateUniquePostSlug(base: string, currentId: string) {
   let slug = base;
@@ -179,7 +180,7 @@ export default async function EditPostPage({ params, searchParams }: PageProps) 
 
         <div className={styles.field}>
           <label htmlFor="content">İçerik</label>
-          <MarkdownField name="content" required defaultValue={post.content} />
+          <EditorField name="content" defaultValue={post.content} />
         </div>
 
         <div className={styles.row}>
@@ -199,10 +200,11 @@ export default async function EditPostPage({ params, searchParams }: PageProps) 
           />
         </div>
 
-        <div className={styles.field}>
-          <label htmlFor="coverImageUrl">Kapak Görseli URL</label>
-          <input id="coverImageUrl" name="coverImageUrl" defaultValue={post.coverImageUrl ?? ""} />
-        </div>
+        <CoverImageField
+          name="coverImageUrl"
+          label="Kapak Görseli URL"
+          defaultValue={post.coverImageUrl ?? ""}
+        />
 
         <div className={styles.actions}>
           <button className={styles.primary} type="submit">
