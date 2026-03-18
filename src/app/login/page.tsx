@@ -4,6 +4,8 @@ import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
+import styles from "./page.module.css";
+import Link from "next/link";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -50,47 +52,39 @@ export default function LoginPage() {
   };
 
   return (
-    <main style={{ maxWidth: 420, margin: "80px auto", padding: "0 16px" }}>
-      <h1 style={{ fontSize: 28, marginBottom: 24 }}>Admin Girişi</h1>
-      <form onSubmit={onSubmit} style={{ display: "grid", gap: 12 }}>
-        <label style={{ display: "grid", gap: 6 }}>
-          <span>E-posta</span>
-          <input
-            type="email"
-            required
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            style={{ padding: 10, border: "1px solid #ccc", borderRadius: 6 }}
-          />
-        </label>
-        <label style={{ display: "grid", gap: 6 }}>
-          <span>Parola</span>
-          <input
-            type="password"
-            required
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            style={{ padding: 10, border: "1px solid #ccc", borderRadius: 6 }}
-          />
-        </label>
-        {error ? (
-          <p style={{ color: "#b91c1c", margin: 0 }}>{error}</p>
-        ) : null}
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          style={{
-            padding: 12,
-            borderRadius: 6,
-            border: "none",
-            background: "#111827",
-            color: "white",
-            cursor: "pointer",
-          }}
-        >
-          {isSubmitting ? "Giriş yapılıyor..." : "Giriş yap"}
-        </button>
-      </form>
+    <main className={styles.page}>
+      <section className={styles.card}>
+        <Link href="/" className={styles.backLink}>
+          ← Anasayfaya dön
+        </Link>
+        <h1 className={styles.title}>Admin Girişi</h1>
+        <form onSubmit={onSubmit} className={styles.form}>
+          <label className={styles.field}>
+            <span>E-posta</span>
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              className={styles.input}
+            />
+          </label>
+          <label className={styles.field}>
+            <span>Parola</span>
+            <input
+              type="password"
+              required
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              className={styles.input}
+            />
+          </label>
+          {error ? <p className={styles.error}>{error}</p> : null}
+          <button type="submit" disabled={isSubmitting} className={styles.button}>
+            {isSubmitting ? "Giriş yapılıyor..." : "Giriş yap"}
+          </button>
+        </form>
+      </section>
     </main>
   );
 }
