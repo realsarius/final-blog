@@ -1,7 +1,16 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import styles from "./layout.module.css";
 import SignOutButton from "@/components/admin/SignOutButton";
 import AdminToasts from "@/components/admin/AdminToasts";
+
+export const metadata: Metadata = {
+  title: "Admin",
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 const blogNavItems = [
   { href: "/admin", label: "Genel Bakış" },

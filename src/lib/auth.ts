@@ -99,9 +99,10 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
+        const userWithRole = user as unknown as { role?: Role; tokenVersion?: number };
         token.id = user.id;
-        token.role = (user as { role: Role }).role;
-        token.tokenVersion = (user as { tokenVersion?: number }).tokenVersion ?? 0;
+        token.role = userWithRole.role ?? "ADMIN";
+        token.tokenVersion = userWithRole.tokenVersion ?? 0;
         token.isActive = true;
         return token;
       }
