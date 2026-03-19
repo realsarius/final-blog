@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { formatDate } from "@/lib/format";
 import { getContentText } from "@/lib/content";
+import { formatReadingTime } from "@/lib/readingTime";
 import styles from "./ArticleCard.module.css";
 
 interface ArticleCardProps {
@@ -30,6 +31,7 @@ export default function ArticleCard({
   const manualExcerpt = getContentText(post.excerpt ?? "");
   const excerptSource = manualExcerpt || fallbackExcerpt;
   const excerptText = excerptSource.length > 0 ? `${excerptSource.slice(0, 240).trim()}...` : null;
+  const readingTime = formatReadingTime(post.content ?? "");
 
   return (
     <article className={`${styles.card} ${hasImage ? styles.hasImage : styles.noImage}`}>
@@ -50,6 +52,7 @@ export default function ArticleCard({
         </h3>
         <div className={styles.meta}>
           <span>{formatDate(post.publishedAt ?? post.createdAt)}</span>
+          {readingTime ? <span>{readingTime}</span> : null}
           {typeof commentCount === "number" ? (
             <span>{commentCount} Yorum</span>
           ) : null}

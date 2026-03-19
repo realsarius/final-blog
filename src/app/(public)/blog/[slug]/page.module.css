@@ -8,6 +8,33 @@
   margin-bottom: var(--space-6);
 }
 
+.titleRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.editLink {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm, 4px);
+  padding: 4px 10px;
+  text-decoration: none;
+  transition: color 150ms, border-color 150ms;
+  margin-top: 6px;
+}
+
+.editLink:hover {
+  color: var(--text);
+  border-color: var(--text);
+}
+
 .header h1 {
   font-size: clamp(26px, 3.5vw, 38px);
   line-height: 1.2;

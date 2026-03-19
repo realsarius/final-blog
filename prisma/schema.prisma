@@ -62,6 +62,30 @@ model Post {
   categories PostCategory[]
   tags       PostTag[]
   views      PostView[]
+  heroSlides HeroSlide[]
+}
+
+model HeroSlide {
+  id        String   @id @default(cuid())
+  imageUrl  String
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  post   Post?   @relation(fields: [postId], references: [id], onDelete: SetNull)
+  postId String?
+
+  @@index([isActive, sortOrder])
+  @@index([postId])
+}
+
+model HeroConfig {
+  id                  String   @id @default("default")
+  autoplaySeconds     Int      @default(10)
+  transitionDirection String   @default("left")
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 }
 
 model Category {

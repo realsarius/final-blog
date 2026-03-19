@@ -1,0 +1,32 @@
+.button {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  border: 1px solid #6e6a61;
+  background: #2f2f2f;
+  color: #f3f0e9;
+  font-size: 18px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(12px);
+  pointer-events: none;
+  transition: opacity 180ms ease, transform 180ms ease, background 140ms ease;
+  z-index: 24;
+}
+
+.button:hover {
+  background: #252525;
+}
+
+.buttonVisible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}

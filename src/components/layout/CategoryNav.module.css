@@ -1,7 +1,25 @@
+.shell {
+  /* --nav-height: 47px;
+  min-height: var(--nav-height); */
+}
+
 .nav {
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
   background: var(--surface);
+  min-height: var(--nav-height);
+}
+
+:global(html.is-scrolled) .nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 44;
+  box-shadow: 0 8px 22px rgba(20, 24, 18, 0.08);
+  border-top-color: transparent;
+  background: color-mix(in srgb, var(--surface) 88%, #ffffff 12%);
+  backdrop-filter: blur(8px);
 }
 
 .navInner {
@@ -52,6 +70,10 @@
 }
 
 @media (max-width: 800px) {
+  .shell {
+    --nav-height: 43px;
+  }
+
   .right {
     display: none;
   }

@@ -1,13 +1,24 @@
 import { prisma } from "@/lib/prisma";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import styles from "./page.module.css";
 import CategoryNav from "@/components/layout/CategoryNav";
 import AuthorCard from "@/components/sidebar/AuthorCard";
 import NewsletterWidget from "@/components/sidebar/NewsletterWidget";
 import PopularSection from "@/components/sidebar/PopularSection";
-import ArticleCard from "@/components/blog/ArticleCard";
 import ScrollClassToggler from "@/components/layout/ScrollClassToggler";
+import HomeArticleExplorer from "@/components/blog/HomeArticleExplorer";
+import BackToTopButton from "@/components/layout/BackToTopButton";
+import HomeSearchProvider, { type HomeSearchPost } from "@/components/blog/HomeSearchProvider";
+import SidebarArticleSearch from "@/components/sidebar/SidebarArticleSearch";
+import HomeHeroOverlay from "./HomeHeroOverlay";
+
+type HeroTransitionDirection = "left" | "right";
 
 export default async function HomePage() {
+  const session = await getServerSession(authOptions);
+  const isAdmin = session?.user?.role === "ADMIN";
+
   const posts = await prisma.post.findMany({
     where: { status: "PUBLISHED" },
     orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
@@ -18,15 +29,142 @@ export default async function HomePage() {
     },
   });
 
-  const latestPosts = posts.slice(0, 4);
+  const latestPosts = posts.slice(0, 6);
   const popularPosts = posts.slice(0, 4);
   const author = posts[0]?.author ?? null;
+  const availablePosts = await prisma.post.findMany({
+    where: {
+      status: "PUBLISHED",
+    },
+    orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
+    take: 40,
+    select: {
+      id: true,
+      title: true,
+      slug: true,
+      excerpt: true,
+      coverImageUrl: true,
+      featured: true,
+    },
+  });
+
+  type HeroSlideRecord = {
+    id: string;
+    imageUrl: string;
+    postId: string | null;
+    post: { id: string; title: string; slug: string; excerpt: string | null; coverImageUrl: string | null } | null;
+  };
+  type HeroConfigRecord = {
+    autoplaySeconds: number;
+    transitionDirection: string;
+  };
+  let persistedHeroSlides: HeroSlideRecord[] = [];
+  let persistedHeroConfig: HeroConfigRecord | null = null;
+  const heroSlideModel = (prisma as unknown as {
+    heroSlide?: {
+      findMany: (args: unknown) => Promise<HeroSlideRecord[]>;
+    };
+  }).heroSlide;
+  if (heroSlideModel?.findMany) {
+    try {
+      persistedHeroSlides = await heroSlideModel.findMany({
+        where: { isActive: true },
+        orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+        include: {
+          post: {
+            select: {
+              id: true,
+              title: true,
+              slug: true,
+              excerpt: true,
+              coverImageUrl: true,
+            },
+          },
+        },
+        take: 10,
+      });
+    } catch {
+      persistedHeroSlides = [];
+    }
+  }
+  const heroConfigModel = (prisma as unknown as {
+    heroConfig?: {
+      findUnique: (args: unknown) => Promise<HeroConfigRecord | null>;
+    };
+  }).heroConfig;
+  if (heroConfigModel?.findUnique) {
+    try {
+      persistedHeroConfig = await heroConfigModel.findUnique({
+        where: { id: "default" },
+        select: {
+          autoplaySeconds: true,
+          transitionDirection: true,
+        },
+      });
+    } catch {
+      persistedHeroConfig = null;
+    }
+  }
+
+  const fallbackSlides = availablePosts
+    .filter((post) => post.featured && post.coverImageUrl)
+    .map((post) => ({
+      imageUrl: post.coverImageUrl ?? "",
+      postId: post.id,
+      postTitle: post.title,
+      postSlug: post.slug,
+      postExcerpt: post.excerpt,
+      postCoverImageUrl: post.coverImageUrl,
+    }));
+
+  const heroSlides = persistedHeroSlides.length > 0
+    ? persistedHeroSlides.map((slide) => ({
+      id: slide.id,
+      imageUrl: slide.imageUrl,
+      postId: slide.postId,
+      postTitle: slide.post?.title ?? null,
+      postSlug: slide.post?.slug ?? null,
+      postExcerpt: slide.post?.excerpt ?? null,
+      postCoverImageUrl: slide.post?.coverImageUrl ?? null,
+    }))
+    : (fallbackSlides.length > 0
+      ? fallbackSlides
+      : availablePosts.filter((post) => Boolean(post.coverImageUrl)).slice(0, 5).map((post) => ({
+        imageUrl: post.coverImageUrl ?? "",
+        postId: post.id,
+        postTitle: post.title,
+        postSlug: post.slug,
+        postExcerpt: post.excerpt,
+        postCoverImageUrl: post.coverImageUrl,
+      })));
+  const heroSettings = {
+    autoplaySeconds: Math.min(60, Math.max(2, persistedHeroConfig?.autoplaySeconds ?? 10)),
+    transitionDirection: (persistedHeroConfig?.transitionDirection === "right" ? "right" : "left") as HeroTransitionDirection,
+  };
+  const explorerPosts: HomeSearchPost[] = latestPosts.map((post) => ({
+    id: post.id,
+    title: post.title,
+    slug: post.slug,
+    excerpt: post.excerpt,
+    content: post.content,
+    coverImageUrl: post.coverImageUrl,
+    publishedAt: post.publishedAt ? post.publishedAt.toISOString() : null,
+    createdAt: post.createdAt.toISOString(),
+    categories: post.categories,
+  }));
 
   return (
     <div className={styles.page}>
       <ScrollClassToggler threshold={140} />
+      <BackToTopButton />
       {/* Hero */}
-      <section className={styles.heroSection}>
+      <section id="home-hero" className={styles.heroSection}>
+        <HomeHeroOverlay
+          initialSlides={heroSlides}
+          initialSettings={heroSettings}
+          availablePosts={availablePosts}
+          isAdmin={isAdmin}
+        />
         <div className={styles.heroGhost} aria-hidden="true">
           Berkan&apos;ın<br />Notları
         </div>
@@ -51,44 +189,39 @@ export default async function HomePage() {
       <CategoryNav />
 
       <div className="container">
-        <div className={styles.contentGrid}>
-          <main className={styles.mainCol}>
-            <div className={styles.sectionHeader}>
-              <h2 className={styles.sectionTitle}>Son Yazılar</h2>
-            </div>
-            {latestPosts.length === 0 ? (
-              <div className={styles.empty}>
-                <p>Henüz yayınlanmış bir yazı yok.</p>
+        <HomeSearchProvider posts={explorerPosts}>
+          <div className={styles.contentGrid}>
+            <main className={styles.mainCol}>
+              <div className={styles.sectionHeader}>
+                <h2 className={styles.sectionTitle}>Son Yazılar</h2>
               </div>
-            ) : (
-              <div className={styles.articles}>
-                {latestPosts.map((post, index) => (
-                  <ArticleCard
-                    key={post.id}
-                    post={post}
-                    isLatest={index === 0}
-                  />
-                ))}
-              </div>
-            )}
-          </main>
+              {latestPosts.length === 0 ? (
+                <div className={styles.empty}>
+                  <p>Henüz yayınlanmış bir yazı yok.</p>
+                </div>
+              ) : (
+                <HomeArticleExplorer />
+              )}
+            </main>
 
-          <aside className={styles.sidebar}>
-            {author && (
-              <div
-                className={styles.sidebarAuthor}
-                data-author-location="sidebar"
-                aria-hidden="true"
-              >
-                <AuthorCard author={author} />
+            <aside className={styles.sidebar}>
+              {author && (
+                <div
+                  className={styles.sidebarAuthor}
+                  data-author-location="sidebar"
+                  aria-hidden="true"
+                >
+                  <AuthorCard author={author} />
+                </div>
+              )}
+              <div className={styles.sidebarStack}>
+                {latestPosts.length > 0 ? <SidebarArticleSearch /> : null}
+                <NewsletterWidget />
+                <PopularSection posts={popularPosts} />
               </div>
-            )}
-            <div className={styles.sidebarStack}>
-              <NewsletterWidget />
-              <PopularSection posts={popularPosts} />
-            </div>
-          </aside>
-        </div>
+            </aside>
+          </div>
+        </HomeSearchProvider>
       </div>
     </div>
   );

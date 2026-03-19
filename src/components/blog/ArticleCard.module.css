@@ -36,7 +36,7 @@
   transition: transform 300ms ease;
 }
 
-.card:hover .image {
+.imageWrap:hover .image {
   transform: scale(1.12);
 }
 

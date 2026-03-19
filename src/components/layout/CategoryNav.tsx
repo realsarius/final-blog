@@ -6,22 +6,24 @@ const navLinks = [
   { href: "/blog?sort=popular", label: "Popüler" },
   { href: "/about", label: "Hakkımda" },
   { href: "/contact", label: "İletişim" },
-  { href: "/privacy", label: "Gizlilik" },
+  // { href: "/privacy", label: "Gizlilik" },
 ];
 
 export default function CategoryNav() {
   return (
-    <nav className={styles.nav} aria-label="Kategoriler">
-      <div className={`container ${styles.navInner}`}>
-        <div className={styles.inner}>
-          {navLinks.map((link) => (
-            <Link key={link.href} href={link.href} className={styles.link}>
-              {link.label}
-            </Link>
-          ))}
+    <div className={styles.shell}>
+      <nav className={styles.nav} aria-label="Kategoriler">
+        <div className={`container ${styles.navInner}`}>
+          <div className={styles.inner}>
+            {navLinks.map((link) => (
+              <Link key={link.href} href={link.href} className={styles.link}>
+                {link.label}
+              </Link>
+            ))}
+          </div>
+          <div className={styles.right}>Arşiv</div>
         </div>
-        <div className={styles.right}>asd</div>
-      </div>
-    </nav>
+      </nav>
+    </div>
   );
 }

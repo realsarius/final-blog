@@ -1,0 +1,8 @@
+<svg width="1200" height="800" viewBox="0 0 1200 800" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="800" fill="#273325"/>
+  <circle cx="1040" cy="140" r="220" fill="#5F7344" fill-opacity="0.45"/>
+  <circle cx="220" cy="700" r="260" fill="#8EA16A" fill-opacity="0.35"/>
+  <path d="M0 620C210 520 360 760 580 650C780 550 910 360 1200 450V800H0V620Z" fill="#1E281C" fill-opacity="0.65"/>
+  <text x="84" y="146" fill="#EDE9DF" font-family="Georgia, serif" font-size="56" font-weight="700" letter-spacing="3">BERKAN'IN NOTLARI</text>
+  <text x="84" y="208" fill="#D3CDBF" font-family="Georgia, serif" font-size="28" letter-spacing="1">One cikan yazi kapagi bulunamadi</text>
+</svg>

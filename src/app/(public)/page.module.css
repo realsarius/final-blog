@@ -4,13 +4,70 @@
 
 .heroSection {
   position: relative;
-  background: var(--bg);
+  background-color: var(--bg);
+  background-image: none;
   /* overflow: hidden kaldırıldı — heroCard aşağı taşıyor */
-  --hero-section-height: clamp(320px, 42vw, 620px);
+  --hero-section-height: 560px;
   height: var(--hero-section-height);
   padding-bottom: var(--space-6);
   transition: height 320ms ease, padding-bottom 180ms ease;
   --hero-title-size: clamp(60px, 11vw, 148px);
+}
+
+.heroMedia {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.heroMediaLayer {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  will-change: transform, opacity;
+}
+
+.heroSlideStatic {
+  transform: translateX(0);
+}
+
+.heroSlideInFromRight {
+  animation: heroSlideInFromRight 520ms ease forwards;
+}
+
+.heroSlideInFromLeft {
+  animation: heroSlideInFromLeft 520ms ease forwards;
+}
+
+.heroSlideOutLeft {
+  animation: heroSlideOutLeft 520ms ease forwards;
+}
+
+.heroSlideOutRight {
+  animation: heroSlideOutRight 520ms ease forwards;
+}
+
+@keyframes heroSlideInFromRight {
+  from { transform: translateX(18%); opacity: 0.78; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes heroSlideInFromLeft {
+  from { transform: translateX(-18%); opacity: 0.78; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes heroSlideOutLeft {
+  from { transform: translateX(0); opacity: 1; }
+  to { transform: translateX(-18%); opacity: 0.72; }
+}
+
+@keyframes heroSlideOutRight {
+  from { transform: translateX(0); opacity: 1; }
+  to { transform: translateX(18%); opacity: 0.72; }
 }
 
 /* Ghost watermark — absolute, tüm hero'yu kaplar */
@@ -21,7 +78,7 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
   line-height: 0.88;
-  color: var(--line);
+  color: color-mix(in srgb, var(--line) 82%, #f5f0e8 18%);
   position: absolute;
   inset: 0;
   display: flex;
@@ -31,19 +88,20 @@
   text-align: center;
   user-select: none;
   pointer-events: none;
-  z-index: 0;
+  z-index: 1;
   height: max-content;
 }
 
 /* Hero içerik — tek sütun, metin sol hizalı */
 .heroInner {
   position: relative;
-  z-index: 1;
+  z-index: 2;
   padding-top: var(--space-7);
   display: grid;
   grid-template-columns: minmax(0, 1fr) 300px;
   gap: var(--space-8);
   align-items: start;
+  height: 100%;
   transition: padding 180ms ease;
 }
 
@@ -61,7 +119,7 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
   line-height: 0.88;
-  transition: font-size 180ms ease;
+  transition: font-size 180ms ease, opacity 180ms ease;
   background-image: linear-gradient(
     145deg,
     #8fa06a 0%,
@@ -78,13 +136,393 @@
   width: max-content;
 }
 
+.heroText:hover .heroClipped {
+  opacity: 0;
+}
+
+.heroSection:hover .heroGhost {
+  opacity: 0.12;
+}
+
 .heroAuthor {
   display: block;
   position: relative;
   transform: translateY(128px);
-  z-index: 2;
+  z-index: 3;
   opacity: 1;
   transition: transform 450ms ease-in-out, opacity 450ms ease-in-out;
+}
+
+.heroActivePost {
+  position: absolute;
+  left: var(--space-5);
+  bottom: calc(var(--space-5) + 22px);
+  z-index: 4;
+  pointer-events: auto;
+}
+
+.heroActiveCard {
+  display: grid;
+  grid-template-columns: 68px minmax(0, 1fr);
+  gap: 10px;
+  width: min(390px, calc(100vw - 120px));
+  padding: 8px;
+  border: 1px solid rgba(250, 247, 242, 0.55);
+  border-radius: 12px;
+  background: rgba(20, 24, 18, 0.5);
+  color: rgba(250, 247, 242, 0.96);
+}
+
+.heroActiveThumb {
+  width: 68px;
+  height: 68px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.heroActiveMeta {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.heroActiveMeta strong {
+  font-size: 13px;
+  line-height: 1.25;
+  letter-spacing: 0.02em;
+}
+
+.heroActiveMeta em {
+  margin: 0;
+  color: rgba(250, 247, 242, 0.76);
+  font-style: normal;
+  font-size: 11px;
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.heroDots {
+  position: absolute;
+  left: var(--space-5);
+  bottom: var(--space-5);
+  z-index: 4;
+  display: flex;
+  gap: 6px;
+}
+
+.heroDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(250, 247, 242, 0.65);
+  background: rgba(250, 247, 242, 0.2);
+  cursor: pointer;
+  transition: transform 140ms ease, background 140ms ease;
+}
+
+.heroDotActive {
+  background: rgba(250, 247, 242, 0.95);
+  transform: scale(1.15);
+}
+
+.heroEditButton {
+  position: absolute;
+  top: var(--space-4);
+  right: var(--space-5);
+  z-index: 5;
+  width: 36px;
+  height: 36px;
+  border: 1px solid rgba(250, 247, 242, 0.55);
+  border-radius: 999px;
+  background: rgba(20, 24, 18, 0.44);
+  color: rgba(250, 247, 242, 0.94);
+  cursor: pointer;
+}
+
+.heroEditButton svg {
+  width: 18px;
+  height: 18px;
+}
+
+.heroEditor {
+  position: absolute;
+  top: calc(var(--space-4) + 44px);
+  right: var(--space-5);
+  width: min(620px, calc(100% - (var(--space-5) * 2)));
+  max-height: min(70vh, 760px);
+  z-index: 6;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--surface) 93%, #ffffff 7%);
+  box-shadow: 0 20px 42px rgba(15, 18, 12, 0.18);
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+}
+
+.heroEditorHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--line);
+}
+
+.heroEditorHeader h3 {
+  margin: 0;
+  font-size: 14px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.heroEditorHeader button {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.heroEditorBody {
+  overflow: auto;
+  padding: var(--space-4);
+  display: grid;
+  gap: var(--space-4);
+}
+
+.heroEditorBlock {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.heroEditorBlock h4 {
+  margin: 0;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.heroComposerRow {
+  display: grid;
+  gap: 6px;
+}
+
+.heroComposerRow label {
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.heroSelect {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  padding: 8px 10px;
+}
+
+.heroInput {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  padding: 8px 10px;
+}
+
+.heroSelectedImage {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.heroSelectedImage span {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  padding: 8px 10px;
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.heroSelectedImage button {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.heroCheckbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.heroComposerActions {
+  display: flex;
+}
+
+.heroComposerActions button {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--accent-dark);
+  color: var(--text-light);
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.heroSlideRow {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.heroSlideRow img {
+  width: 72px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+}
+
+.heroSlideRow p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.heroSlideRowActions {
+  display: flex;
+  gap: 6px;
+}
+
+.heroSlideRowActions button {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  padding: 5px 8px;
+  cursor: pointer;
+}
+
+.heroPostList {
+  display: grid;
+  gap: 8px;
+}
+
+.heroPostRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.heroPostRow button {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  padding: 7px 10px;
+  cursor: pointer;
+  font-size: 12px;
+  text-align: left;
+}
+
+.heroPostRow button:last-child {
+  text-align: center;
+}
+
+.heroChoices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.heroChoices button {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  padding: 7px 11px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.heroImageGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 8px;
+}
+
+.heroImageTile {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.heroImageTileSelected {
+  border-color: var(--accent-dark);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+.heroImageTile img {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+}
+
+.heroEditorFooter {
+  border-top: 1px solid var(--line);
+  padding: var(--space-3) var(--space-4);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.heroEditorFooter button {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: var(--text-light);
+  padding: 8px 14px;
+  cursor: pointer;
+}
+
+.heroLibraryTop {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.heroLibraryTop button {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  padding: 8px 11px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.heroUploadButton {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  padding: 8px 11px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.heroUploadButton input {
+  display: none;
 }
 
 /* ── Kategori Nav altında içerik grid ─────────────── */
@@ -107,7 +545,7 @@
   gap: 0;
   position: sticky;
   top: var(--space-6);
-  transform: translateY(128px);
+  transform: translateY(200px);
   transition: transform 160ms ease;
 }
 
@@ -220,5 +658,27 @@
     transform: translateY(0);
     pointer-events: auto;
     margin-bottom: var(--space-5);
+  }
+
+  .heroEditButton {
+    right: var(--space-4);
+  }
+
+  .heroEditor {
+    right: var(--space-4);
+    width: calc(100% - (var(--space-4) * 2));
+  }
+
+  .heroDots {
+    left: var(--space-4);
+  }
+
+  .heroActivePost {
+    left: var(--space-4);
+    bottom: calc(var(--space-4) + 18px);
+  }
+
+  .heroActiveCard {
+    width: min(320px, calc(100vw - 80px));
   }
 }
