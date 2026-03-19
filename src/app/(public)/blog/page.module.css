@@ -4,8 +4,10 @@
 
 .header {
   margin-bottom: var(--space-6);
-  display: grid;
-  gap: var(--space-3);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
 }
 
 .header h1 {
@@ -16,6 +18,30 @@
   color: var(--muted);
   max-width: 560px;
   line-height: 1.7;
+}
+
+.viewSwitch {
+  display: inline-flex;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.viewButton {
+  padding: 8px 12px;
+  font-size: 13px;
+  color: var(--muted);
+  border-right: 1px solid var(--line);
+}
+
+.viewButton:last-child {
+  border-right: 0;
+}
+
+.viewButtonActive {
+  color: var(--text);
+  background: color-mix(in srgb, var(--line) 18%, var(--surface) 82%);
 }
 
 .empty {
@@ -33,6 +59,11 @@
   gap: var(--space-6);
 }
 
+.listGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
 .item {
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
@@ -40,6 +71,10 @@
   background: var(--surface);
   display: grid;
   gap: var(--space-3);
+}
+
+.itemGrid {
+  align-content: start;
 }
 
 .meta {
@@ -75,4 +110,53 @@
 
 .link:hover {
   border-bottom-color: var(--accent-dark);
+}
+
+.pagination {
+  margin-top: var(--space-6);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.pageNumbers {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.pageLink {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+.pageActive {
+  background: color-mix(in srgb, var(--line) 24%, var(--surface) 76%);
+}
+
+.pageDisabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+@media (max-width: 900px) {
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .listGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .pagination {
+    flex-direction: column;
+    align-items: stretch;
+  }
 }
