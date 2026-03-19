@@ -153,7 +153,12 @@ export default async function HomePage() {
       })));
   const heroSettings = {
     autoplaySeconds: Math.min(60, Math.max(2, persistedHeroConfig?.autoplaySeconds ?? 10)),
-    transitionDirection: (persistedHeroConfig?.transitionDirection === "right" ? "right" : "left") as HeroTransitionDirection,
+    transitionDirection: (
+      persistedHeroConfig?.transitionDirection === "RIGHT"
+        || persistedHeroConfig?.transitionDirection === "right"
+        ? "right"
+        : "left"
+    ) as HeroTransitionDirection,
   };
   const explorerPosts: HomeSearchPost[] = latestPosts.map((post) => ({
     id: post.id,

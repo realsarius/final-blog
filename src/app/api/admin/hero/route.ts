@@ -17,6 +17,9 @@ type HeroSettingsPayload = {
   transitionDirection?: unknown;
 };
 
+type HeroTransitionDirectionDb = "LEFT" | "RIGHT" | "UP" | "DOWN";
+type HeroTransitionDirectionUi = "left" | "right";
+
 const DEFAULT_AUTOPLAY_SECONDS = 10;
 const MIN_AUTOPLAY_SECONDS = 2;
 const MAX_AUTOPLAY_SECONDS = 60;
@@ -65,8 +68,19 @@ function normalizeAutoplaySeconds(value: unknown) {
   return Math.min(MAX_AUTOPLAY_SECONDS, Math.max(MIN_AUTOPLAY_SECONDS, Math.round(value)));
 }
 
-function normalizeTransitionDirection(value: unknown): "left" | "right" {
-  return value === "right" ? "right" : "left";
+function normalizeTransitionDirectionDb(value: unknown): HeroTransitionDirectionDb {
+  if (typeof value !== "string") {
+    return "LEFT";
+  }
+  const normalized = value.trim().toUpperCase();
+  if (normalized === "RIGHT" || normalized === "UP" || normalized === "DOWN") {
+    return normalized;
+  }
+  return "LEFT";
+}
+
+function toUiTransitionDirection(value: unknown): HeroTransitionDirectionUi {
+  return normalizeTransitionDirectionDb(value) === "RIGHT" ? "right" : "left";
 }
 
 async function requireAdmin() {
@@ -135,7 +149,7 @@ export async function GET() {
     },
   });
 
-  let settings: { autoplaySeconds: number; transitionDirection: "left" | "right" } = {
+  let settings: { autoplaySeconds: number; transitionDirection: HeroTransitionDirectionUi } = {
     autoplaySeconds: DEFAULT_AUTOPLAY_SECONDS,
     transitionDirection: "left" as const,
   };
@@ -151,7 +165,7 @@ export async function GET() {
       if (config) {
         settings = {
           autoplaySeconds: normalizeAutoplaySeconds(config.autoplaySeconds),
-          transitionDirection: normalizeTransitionDirection(config.transitionDirection),
+          transitionDirection: toUiTransitionDirection(config.transitionDirection),
         };
       }
     } catch {
@@ -212,9 +226,13 @@ export async function PUT(request: Request) {
     })
     .filter((item) => item.imageUrl);
   const settingsPayload = (rawSettings && typeof rawSettings === "object" ? rawSettings : {}) as HeroSettingsPayload;
-  const settings = {
+  const settingsForDb = {
     autoplaySeconds: normalizeAutoplaySeconds(settingsPayload.autoplaySeconds),
-    transitionDirection: normalizeTransitionDirection(settingsPayload.transitionDirection),
+    transitionDirection: normalizeTransitionDirectionDb(settingsPayload.transitionDirection),
+  };
+  const settings = {
+    autoplaySeconds: settingsForDb.autoplaySeconds,
+    transitionDirection: toUiTransitionDirection(settingsForDb.transitionDirection),
   };
 
   if (slides.length === 0) {
@@ -222,10 +240,10 @@ export async function PUT(request: Request) {
     if (heroConfigModel?.upsert) {
       await heroConfigModel.upsert({
         where: { id: "default" },
-        update: settings,
+        update: settingsForDb,
         create: {
           id: "default",
-          ...settings,
+          ...settingsForDb,
         },
       });
     }
@@ -281,10 +299,10 @@ export async function PUT(request: Request) {
     if (txHeroConfig?.upsert) {
       await txHeroConfig.upsert({
         where: { id: "default" },
-        update: settings,
+        update: settingsForDb,
         create: {
           id: "default",
-          ...settings,
+          ...settingsForDb,
         },
       });
     }

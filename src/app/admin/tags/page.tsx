@@ -1,5 +1,6 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/slug";
 import { requireAdminSession } from "@/lib/adminAuth";
@@ -23,9 +24,16 @@ async function addTag(formData: FormData) {
     finalSlug = `${slug}-${counter}`;
     counter += 1;
   }
-  await prisma.tag.create({
-    data: { name: validation.data, slug: finalSlug },
-  });
+  try {
+    await prisma.tag.create({
+      data: { name: validation.data, slug: finalSlug },
+    });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      redirect(`/admin/tags?error=${encodeURIComponent("Bu etiket adı zaten kayıtlı.")}`);
+    }
+    throw error;
+  }
   revalidatePath("/admin/tags");
   redirect(`/admin/tags?success=${encodeURIComponent("Etiket eklendi.")}`);
 }
@@ -64,10 +72,17 @@ async function updateTag(formData: FormData) {
     counter += 1;
   }
 
-  await prisma.tag.update({
-    where: { id },
-    data: { name: validation.data, slug: finalSlug },
-  });
+  try {
+    await prisma.tag.update({
+      where: { id },
+      data: { name: validation.data, slug: finalSlug },
+    });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      redirect(`/admin/tags?error=${encodeURIComponent("Bu etiket adı zaten kayıtlı.")}`);
+    }
+    throw error;
+  }
   revalidatePath("/admin/tags");
   redirect(`/admin/tags?success=${encodeURIComponent("Etiket güncellendi.")}`);
 }

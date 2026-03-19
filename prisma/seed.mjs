@@ -47,7 +47,28 @@ async function main() {
     });
     console.log("Admin user seeded successfully.");
   } else {
-    console.log("Admin user already exists. Skipping user seed.");
+    const nextFirstName = process.env.ADMIN_FIRST_NAME;
+    const nextLastName = process.env.ADMIN_LAST_NAME;
+    const shouldUpdateProfile =
+      admin.firstName !== nextFirstName
+      || admin.lastName !== nextLastName
+      || admin.role !== "ADMIN"
+      || admin.isActive !== true;
+
+    if (shouldUpdateProfile) {
+      admin = await prisma.user.update({
+        where: { id: admin.id },
+        data: {
+          firstName: nextFirstName,
+          lastName: nextLastName,
+          role: "ADMIN",
+          isActive: true,
+        },
+      });
+      console.log("Admin user exists. Profile synced from env.");
+    } else {
+      console.log("Admin user already exists and is up to date.");
+    }
   }
 
   const existingPost = await prisma.post.findFirst();

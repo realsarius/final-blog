@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/slug";
 import { requireAdminSession } from "@/lib/adminAuth";
 import { getFirstErrorMessage, postSchema, splitCommaList } from "@/lib/validation";
+import { parsePostStatus, resolvePublishedAt } from "@/lib/postPublication";
 import styles from "../../post-form.module.css";
 import EditorField from "../../EditorField";
 import TaxonomyPicker from "../../TaxonomyPicker";
@@ -32,7 +33,7 @@ async function updatePost(formData: FormData) {
   const excerpt = formData.get("excerpt")?.toString() ?? "";
   const content = formData.get("content")?.toString() ?? "";
   const coverImageUrl = formData.get("coverImageUrl")?.toString() ?? "";
-  const status = formData.get("status")?.toString() === "PUBLISHED" ? "PUBLISHED" : "DRAFT";
+  const status = parsePostStatus(formData.get("status")?.toString());
   const categories = splitCommaList(formData.get("categories")?.toString() ?? "");
   const tags = splitCommaList(formData.get("tags")?.toString() ?? "");
 
@@ -63,10 +64,7 @@ async function updatePost(formData: FormData) {
 
   const baseSlug = slugify(slugInput || validation.data.title);
   const slug = await generateUniquePostSlug(baseSlug || "yazi", id);
-  const publishedAt =
-    status === "PUBLISHED"
-      ? existingPost.publishedAt ?? new Date()
-      : null;
+  const publishedAt = resolvePublishedAt(status, existingPost.publishedAt);
 
   await prisma.post.update({
     where: { id },

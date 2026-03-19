@@ -1,5 +1,6 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/slug";
 import { requireAdminSession } from "@/lib/adminAuth";
@@ -23,9 +24,16 @@ async function addCategory(formData: FormData) {
     finalSlug = `${slug}-${counter}`;
     counter += 1;
   }
-  await prisma.category.create({
-    data: { name: validation.data, slug: finalSlug },
-  });
+  try {
+    await prisma.category.create({
+      data: { name: validation.data, slug: finalSlug },
+    });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      redirect(`/admin/categories?error=${encodeURIComponent("Bu kategori adı zaten kayıtlı.")}`);
+    }
+    throw error;
+  }
   revalidatePath("/admin/categories");
   redirect(`/admin/categories?success=${encodeURIComponent("Kategori eklendi.")}`);
 }
@@ -64,10 +72,17 @@ async function updateCategory(formData: FormData) {
     counter += 1;
   }
 
-  await prisma.category.update({
-    where: { id },
-    data: { name: validation.data, slug: finalSlug },
-  });
+  try {
+    await prisma.category.update({
+      where: { id },
+      data: { name: validation.data, slug: finalSlug },
+    });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      redirect(`/admin/categories?error=${encodeURIComponent("Bu kategori adı zaten kayıtlı.")}`);
+    }
+    throw error;
+  }
   revalidatePath("/admin/categories");
   redirect(`/admin/categories?success=${encodeURIComponent("Kategori güncellendi.")}`);
 }

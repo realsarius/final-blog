@@ -4,7 +4,7 @@
 // Get a free hosted Postgres database in seconds: `npx create-db`
 
 generator client {
-  provider = "prisma-client-js"
+  provider   = "prisma-client-js"
   engineType = "binary"
 }
 
@@ -14,11 +14,20 @@ datasource db {
 
 enum Role {
   ADMIN
+  EDITOR
+  AUTHOR
 }
 
 enum PostStatus {
   DRAFT
   PUBLISHED
+}
+
+enum TransitionDirection {
+  LEFT
+  RIGHT
+  UP
+  DOWN
 }
 
 model User {
@@ -42,22 +51,22 @@ model User {
 }
 
 model Post {
-  id              String      @id @default(cuid())
+  id              String     @id @default(cuid())
   title           String
-  slug            String      @unique
+  slug            String     @unique
   excerpt         String?
   content         String
   coverImageUrl   String?
-  status          PostStatus  @default(DRAFT)
+  status          PostStatus @default(DRAFT)
   publishedAt     DateTime?
-  featured        Boolean     @default(false)
+  featured        Boolean    @default(false)
   readingTime     Int?
   metaTitle       String?
   metaDescription String?
   ogImageUrl      String?
   canonicalUrl    String?
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
 
   author   User   @relation(fields: [authorId], references: [id])
   authorId String
@@ -66,17 +75,21 @@ model Post {
   tags       PostTag[]
   views      PostView[]
   heroSlides HeroSlide[]
+
+  @@index([status, publishedAt])
+  @@index([featured, publishedAt])
+  @@index([authorId])
 }
 
 model HeroSlide {
-  id        String   @id @default(cuid())
-  imageUrl  String
+  id              String   @id @default(cuid())
+  imageUrl        String
   titleColorLeft  String?
   titleColorRight String?
-  sortOrder Int      @default(0)
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  sortOrder       Int      @default(0)
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   post   Post?   @relation(fields: [postId], references: [id], onDelete: SetNull)
   postId String?
@@ -86,30 +99,30 @@ model HeroSlide {
 }
 
 model HeroConfig {
-  id                  String   @id @default("default")
-  autoplaySeconds     Int      @default(10)
-  transitionDirection String   @default("left")
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  id                  String              @id @default("default")
+  autoplaySeconds     Int                 @default(10)
+  transitionDirection TransitionDirection @default(LEFT)
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
 }
 
 model Category {
   id          String   @id @default(cuid())
-  name        String
+  name        String   @unique
   slug        String   @unique
   description String?
   parentId    String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  parent   Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
-  children Category[] @relation("CategoryHierarchy")
+  parent   Category?      @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children Category[]     @relation("CategoryHierarchy")
   posts    PostCategory[]
 }
 
 model Tag {
   id        String   @id @default(cuid())
-  name      String
+  name      String   @unique
   slug      String   @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
