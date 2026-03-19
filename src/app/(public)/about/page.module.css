@@ -45,3 +45,22 @@
   margin-right: var(--space-2);
   color: var(--accent-dark);
 }
+
+.quickLinks {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.quickLinks a {
+  display: inline-flex;
+  width: fit-content;
+  color: var(--text);
+  text-decoration: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--text) 20%, transparent);
+  padding-bottom: 2px;
+  transition: border-color 160ms ease;
+}
+
+.quickLinks a:hover {
+  border-color: var(--text);
+}
