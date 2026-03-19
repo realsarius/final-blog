@@ -59,7 +59,11 @@ export function splitCommaList(value: string) {
     .filter(Boolean);
 }
 
-export function getFirstErrorMessage(result: z.SafeParseReturnType<unknown, unknown>) {
+type SafeParseLikeResult =
+  | { success: true }
+  | { success: false; error: { issues: Array<{ message?: string }> } };
+
+export function getFirstErrorMessage(result: SafeParseLikeResult) {
   if (result.success) {
     return "";
   }

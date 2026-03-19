@@ -8,6 +8,14 @@ export type EditorContent = {
   version?: string;
 };
 
+function isEditorContent(value: unknown): value is EditorContent {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  return Array.isArray((value as { blocks?: unknown }).blocks);
+}
+
 function normalizePreviewText(value: string) {
   return value
     .replace(/[\u0000-\u001F\u007F-\u009F]/g, " ")
@@ -22,16 +30,19 @@ export function parseEditorContent(raw: string, depth = 0): EditorContent | null
   }
 
   try {
-    const parsed = JSON.parse(trimmed) as EditorContent | EditorBlock[] | string;
+    const parsed = JSON.parse(trimmed) as unknown;
     if (typeof parsed === "string" && depth < 2) {
       return parseEditorContent(parsed, depth + 1);
+    }
+    if (typeof parsed === "string") {
+      return null;
     }
     if (Array.isArray(parsed)) {
       return {
         blocks: parsed,
       };
     }
-    if (!parsed || !Array.isArray(parsed.blocks)) {
+    if (!isEditorContent(parsed)) {
       return null;
     }
     return parsed;
