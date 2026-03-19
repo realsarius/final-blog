@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type TouchEvent } from "react";
 import Link from "next/link";
 import NextImage from "next/image";
 import styles from "./page.module.css";
@@ -72,7 +72,6 @@ type SaveHeroResponse = {
 const GENERIC_COVER_URL = "/hero-generic-cover.svg";
 const MIN_AUTOPLAY_SECONDS = 2;
 const MAX_AUTOPLAY_SECONDS = 60;
-const HERO_ANIMATION_MS = 520;
 const DEFAULT_TITLE_COLOR_LEFT = "#9eae7b";
 const DEFAULT_TITLE_COLOR_RIGHT = "#536546";
 
@@ -98,7 +97,11 @@ function normalizeAutoplaySeconds(value: number) {
 }
 
 function sanitizeDirection(value: unknown): HeroTransitionDirection {
-  return value === "right" ? "right" : "left";
+  if (typeof value !== "string") {
+    return "left";
+  }
+  const normalized = value.trim().toUpperCase();
+  return normalized === "RIGHT" ? "right" : "left";
 }
 
 function normalizeHexColor(value: unknown) {
@@ -118,8 +121,8 @@ function normalizeHexColor(value: unknown) {
 export default function HomeHeroOverlay({ initialSlides, initialSettings, availablePosts, isAdmin }: HomeHeroOverlayProps) {
   const [slides, setSlides] = useState<HeroSlide[]>(initialSlides);
   const [activeIndex, setActiveIndex] = useState(0);
-  const [previousIndex, setPreviousIndex] = useState<number | null>(null);
-  const [animationPhase, setAnimationPhase] = useState<"idle" | "running">("idle");
+  const [trackIndex, setTrackIndex] = useState(0);
+  const [trackTransitionMs, setTrackTransitionMs] = useState(520);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingLibrary, setIsLoadingLibrary] = useState(false);
@@ -138,18 +141,64 @@ export default function HomeHeroOverlay({ initialSlides, initialSettings, availa
     sanitizeDirection(initialSettings.transitionDirection),
   );
   const [colorLoadingIndex, setColorLoadingIndex] = useState<number | null>(null);
-  const previousActiveIndexRef = useRef(0);
-  const animationTimerRef = useRef<number | null>(null);
   const paletteCacheRef = useRef<Record<string, { left: string; right: string }>>({});
   const palettePendingRef = useRef<Record<string, Promise<{ left: string; right: string }>>>({});
+  const autoplayDirectionRef = useRef<HeroTransitionDirection>(sanitizeDirection(initialSettings.transitionDirection));
+  const touchStartXRef = useRef<number | null>(null);
+  const touchStartYRef = useRef<number | null>(null);
 
   const activeSlide = slides[activeIndex] ?? null;
-  const previousSlide = previousIndex !== null ? slides[previousIndex] ?? null : null;
-  const shouldAnimate = animationPhase === "running" && Boolean(activeSlide && previousSlide);
+  const carouselSlides = useMemo(() => slides, [slides]);
   const selectedPost = useMemo(
     () => posts.find((post) => post.id === selectedPostId) ?? null,
     [posts, selectedPostId],
   );
+
+  const runRewindToStart = useCallback(() => {
+    if (slides.length <= 1 || activeIndex !== slides.length - 1) {
+      return false;
+    }
+    const rewindDuration = Math.min(900, Math.max(240, (slides.length - 1) * 220));
+    setTrackTransitionMs(rewindDuration);
+    setTrackIndex(0);
+    setActiveIndex(0);
+    return true;
+  }, [activeIndex, slides.length]);
+
+  const runForwardToEnd = useCallback(() => {
+    if (slides.length <= 1 || activeIndex !== 0) {
+      return false;
+    }
+    const rewindDuration = Math.min(900, Math.max(240, (slides.length - 1) * 220));
+    setTrackTransitionMs(rewindDuration);
+    setTrackIndex(slides.length - 1);
+    setActiveIndex(slides.length - 1);
+    return true;
+  }, [activeIndex, slides.length]);
+
+  const goToNextSlide = useCallback(() => {
+    if (slides.length <= 1) {
+      return;
+    }
+    if (runRewindToStart()) {
+      return;
+    }
+    setTrackTransitionMs(520);
+    setTrackIndex((current) => Math.min(slides.length - 1, current + 1));
+    setActiveIndex((current) => Math.min(slides.length - 1, current + 1));
+  }, [runRewindToStart, slides.length]);
+
+  const goToPreviousSlide = useCallback(() => {
+    if (slides.length <= 1) {
+      return;
+    }
+    if (runForwardToEnd()) {
+      return;
+    }
+    setTrackTransitionMs(520);
+    setTrackIndex((current) => Math.max(0, current - 1));
+    setActiveIndex((current) => Math.max(0, current - 1));
+  }, [runForwardToEnd, slides.length]);
 
   useEffect(() => {
     if (slides.length <= 1) {
@@ -157,46 +206,40 @@ export default function HomeHeroOverlay({ initialSlides, initialSettings, availa
     }
 
     const interval = window.setInterval(() => {
-      setActiveIndex((current) => (current + 1) % slides.length);
+      if (autoplayDirectionRef.current === "right") {
+        goToPreviousSlide();
+        return;
+      }
+      goToNextSlide();
     }, normalizeAutoplaySeconds(autoplaySeconds) * 1000);
 
     return () => window.clearInterval(interval);
-  }, [autoplaySeconds, slides.length]);
+  }, [autoplaySeconds, goToNextSlide, goToPreviousSlide, slides.length]);
 
   useEffect(() => {
-    if (activeIndex === previousActiveIndexRef.current) {
+    autoplayDirectionRef.current = transitionDirection;
+  }, [transitionDirection]);
+
+  useEffect(() => {
+    if (slides.length === 0) {
+      setActiveIndex(0);
+      setTrackIndex(0);
       return;
     }
-    const previous = previousActiveIndexRef.current;
-    previousActiveIndexRef.current = activeIndex;
-    setPreviousIndex(previous);
-    setAnimationPhase("running");
 
-    if (animationTimerRef.current !== null) {
-      window.clearTimeout(animationTimerRef.current);
-    }
-
-    animationTimerRef.current = window.setTimeout(() => {
-      setAnimationPhase("idle");
-      setPreviousIndex(null);
-      animationTimerRef.current = null;
-    }, HERO_ANIMATION_MS);
-  }, [activeIndex]);
-
-  useEffect(() => {
-    return () => {
-      if (animationTimerRef.current !== null) {
-        window.clearTimeout(animationTimerRef.current);
+    setActiveIndex((current) => {
+      if (current < slides.length) {
+        return current;
       }
-    };
-  }, []);
-
-  useEffect(() => {
-    if (activeIndex < slides.length) {
-      return;
-    }
-    setActiveIndex(0);
-  }, [activeIndex, slides.length]);
+      return slides.length - 1;
+    });
+    setTrackIndex((current) => {
+      if (current < slides.length) {
+        return current;
+      }
+      return slides.length - 1;
+    });
+  }, [slides.length]);
 
   useEffect(() => {
     const hero = document.getElementById("home-hero");
@@ -223,7 +266,78 @@ export default function HomeHeroOverlay({ initialSlides, initialSettings, availa
     if (index < 0 || index >= slides.length || index === activeIndex) {
       return;
     }
+    if (index > activeIndex) {
+      autoplayDirectionRef.current = "left";
+    } else {
+      autoplayDirectionRef.current = "right";
+    }
+    setTransitionDirection(autoplayDirectionRef.current);
+    setTrackTransitionMs(520);
+    setTrackIndex(index);
     setActiveIndex(index);
+  }
+
+  function handleTrackTransitionEnd() {
+    setTrackTransitionMs(520);
+  }
+
+  function handleHeroKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    if (slides.length <= 1) {
+      return;
+    }
+
+    if (event.key === "ArrowRight") {
+      event.preventDefault();
+      autoplayDirectionRef.current = "left";
+      setTransitionDirection("left");
+      goToNextSlide();
+      return;
+    }
+
+    if (event.key === "ArrowLeft") {
+      event.preventDefault();
+      autoplayDirectionRef.current = "right";
+      setTransitionDirection("right");
+      goToPreviousSlide();
+    }
+  }
+
+  function handleHeroTouchStart(event: TouchEvent<HTMLDivElement>) {
+    const touch = event.changedTouches[0];
+    if (!touch) {
+      return;
+    }
+    touchStartXRef.current = touch.clientX;
+    touchStartYRef.current = touch.clientY;
+  }
+
+  function handleHeroTouchEnd(event: TouchEvent<HTMLDivElement>) {
+    const touch = event.changedTouches[0];
+    const startX = touchStartXRef.current;
+    const startY = touchStartYRef.current;
+    touchStartXRef.current = null;
+    touchStartYRef.current = null;
+
+    if (!touch || startX === null || startY === null || slides.length <= 1) {
+      return;
+    }
+
+    const deltaX = touch.clientX - startX;
+    const deltaY = touch.clientY - startY;
+    if (Math.abs(deltaX) < 38 || Math.abs(deltaY) > Math.abs(deltaX)) {
+      return;
+    }
+
+    if (deltaX < 0) {
+      autoplayDirectionRef.current = "left";
+      setTransitionDirection("left");
+      goToNextSlide();
+      return;
+    }
+
+    autoplayDirectionRef.current = "right";
+    setTransitionDirection("right");
+    goToPreviousSlide();
   }
 
   function updateSlideColors(index: number, nextLeft: string | null, nextRight: string | null) {
@@ -468,6 +582,7 @@ export default function HomeHeroOverlay({ initialSlides, initialSettings, availa
   }
 
   function moveSlide(index: number, direction: -1 | 1) {
+    let nextActiveIndex = activeIndex;
     setSlides((current) => {
       const target = index + direction;
       if (target < 0 || target >= current.length) {
@@ -476,27 +591,34 @@ export default function HomeHeroOverlay({ initialSlides, initialSettings, availa
       const copy = [...current];
       const [item] = copy.splice(index, 1);
       copy.splice(target, 0, item);
+      if (activeIndex === index) {
+        nextActiveIndex = target;
+      } else if (activeIndex === target) {
+        nextActiveIndex = index;
+      }
       return copy;
     });
-    setActiveIndex((current) => {
-      if (current === index) {
-        return index + direction;
-      }
-      if (current === index + direction) {
-        return index;
-      }
-      return current;
-    });
+    setTrackTransitionMs(520);
+    setActiveIndex(nextActiveIndex);
+    setTrackIndex(nextActiveIndex);
   }
 
   function removeSlide(index: number) {
-    setSlides((current) => current.filter((_, itemIndex) => itemIndex !== index));
-    setActiveIndex((current) => {
-      if (current < index) {
-        return current;
+    let nextActiveIndex = activeIndex;
+    setSlides((current) => {
+      const nextSlides = current.filter((_, itemIndex) => itemIndex !== index);
+      if (nextSlides.length === 0) {
+        nextActiveIndex = 0;
+      } else if (activeIndex > index) {
+        nextActiveIndex = activeIndex - 1;
+      } else if (activeIndex === index) {
+        nextActiveIndex = Math.max(0, activeIndex - 1);
       }
-      return Math.max(0, current - 1);
+      return nextSlides;
     });
+    setTrackTransitionMs(520);
+    setActiveIndex(nextActiveIndex);
+    setTrackIndex(nextActiveIndex);
   }
 
   async function uploadToR2(file: File) {
@@ -588,21 +710,64 @@ export default function HomeHeroOverlay({ initialSlides, initialSettings, availa
   return (
     <>
       {activeSlide ? (
-        <div className={styles.heroMedia} aria-hidden="true">
-          {previousSlide ? (
-            <div
-              className={`${styles.heroMediaLayer} ${shouldAnimate ? (
-                transitionDirection === "left" ? styles.heroSlideOutLeft : styles.heroSlideOutRight
-              ) : ""}`}
-              style={backgroundStyle(previousSlide.imageUrl)}
-            />
-          ) : null}
+        <div
+          className={styles.heroMedia}
+          tabIndex={0}
+          onKeyDown={handleHeroKeyDown}
+          onTouchStart={handleHeroTouchStart}
+          onTouchEnd={handleHeroTouchEnd}
+          aria-label="Hero slider. Sol ve sag ok tuslariyla gecis yapabilirsiniz."
+        >
           <div
-            className={`${styles.heroMediaLayer} ${shouldAnimate ? (
-              transitionDirection === "left" ? styles.heroSlideInFromRight : styles.heroSlideInFromLeft
-            ) : styles.heroSlideStatic}`}
-            style={backgroundStyle(activeSlide.imageUrl)}
-          />
+            className={`${styles.heroTrack} ${styles.heroTrackTransition}`}
+            style={{
+              transform: `translate3d(${-trackIndex * 100}%, 0, 0)`,
+              transitionDuration: `${trackTransitionMs}ms`,
+            }}
+            onTransitionEnd={handleTrackTransitionEnd}
+            aria-hidden="true"
+          >
+            {carouselSlides.map((slide, index) => (
+              <div
+                key={`${slide.id ?? slide.imageUrl}-${index}`}
+                className={styles.heroMediaLayer}
+                style={backgroundStyle(slide.imageUrl)}
+              />
+            ))}
+          </div>
+
+          {slides.length > 1 ? (
+            <>
+              <button
+                type="button"
+                className={`${styles.heroArrow} ${styles.heroArrowLeft}`}
+                onClick={() => {
+                  autoplayDirectionRef.current = "right";
+                  setTransitionDirection("right");
+                  goToPreviousSlide();
+                }}
+                aria-label="Onceki slayt"
+              >
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M14.5 5.5 8 12l6.5 6.5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                className={`${styles.heroArrow} ${styles.heroArrowRight}`}
+                onClick={() => {
+                  autoplayDirectionRef.current = "left";
+                  setTransitionDirection("left");
+                  goToNextSlide();
+                }}
+                aria-label="Sonraki slayt"
+              >
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M9.5 5.5 16 12l-6.5 6.5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+            </>
+          ) : null}
         </div>
       ) : null}
 

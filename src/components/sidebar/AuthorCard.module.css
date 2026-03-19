@@ -21,11 +21,27 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 160ms ease, background 160ms ease;
 }
 
 .editButton svg {
   width: 17px;
   height: 17px;
+}
+
+.card:hover .editButton,
+.card:focus-within .editButton {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+@media (hover: none) {
+  .editButton {
+    opacity: 1;
+    pointer-events: auto;
+  }
 }
 
 .editorPanel {
