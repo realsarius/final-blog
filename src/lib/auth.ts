@@ -4,6 +4,7 @@ import { compare } from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import type { Role } from "@prisma/client";
 import { getClientIp, rateLimit } from "@/lib/rateLimit";
+import { logSecurityEvent } from "@/lib/securityLog";
 
 const isProd = process.env.NODE_ENV === "production";
 
@@ -28,8 +29,14 @@ export const authOptions: NextAuthOptions = {
         }
 
         const ip = getClientIp(req);
-        const limiter = await rateLimit(`login:${ip}`);
+        const limiterIdentity = ip !== "unknown" ? `ip:${ip}` : `email:${email}`;
+        const limiter = await rateLimit(`login:${limiterIdentity}`);
         if (!limiter.allowed) {
+          logSecurityEvent({
+            event: "login_rate_limited",
+            severity: "warn",
+            context: { ip, email, limiterIdentity },
+          });
           const retryInMinutes = Math.max(
             1,
             Math.ceil((limiter.reset - Date.now()) / 60000)
@@ -42,11 +49,21 @@ export const authOptions: NextAuthOptions = {
         });
 
         if (!user || !user.isActive) {
+          logSecurityEvent({
+            event: "login_user_inactive_or_missing",
+            severity: "warn",
+            context: { email, userFound: Boolean(user), isActive: user?.isActive ?? null },
+          });
           return null;
         }
 
         const isValid = await compare(password, user.passwordHash);
         if (!isValid) {
+          logSecurityEvent({
+            event: "login_invalid_password",
+            severity: "warn",
+            context: { email, userId: user.id },
+          });
           return null;
         }
 
@@ -55,6 +72,7 @@ export const authOptions: NextAuthOptions = {
           name: `${user.firstName} ${user.lastName}`,
           email: user.email,
           role: user.role,
+          tokenVersion: user.tokenVersion,
         };
       },
     }),
@@ -83,14 +101,67 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id;
         token.role = (user as { role: Role }).role;
+        token.tokenVersion = (user as { tokenVersion?: number }).tokenVersion ?? 0;
+        token.isActive = true;
+        return token;
       }
+
+      if (!token.id) {
+        return token;
+      }
+
+      const dbUser = await prisma.user.findUnique({
+        where: { id: token.id },
+        select: {
+          id: true,
+          role: true,
+          isActive: true,
+          tokenVersion: true,
+        },
+      });
+
+      if (!dbUser || !dbUser.isActive) {
+        logSecurityEvent({
+          event: "session_invalidated_inactive_user",
+          severity: "warn",
+          context: { userId: token.id ?? null, userFound: Boolean(dbUser) },
+        });
+        delete token.id;
+        delete token.role;
+        delete token.tokenVersion;
+        token.isActive = false;
+        return token;
+      }
+
+      if (
+        typeof token.tokenVersion === "number"
+        && dbUser.tokenVersion !== token.tokenVersion
+      ) {
+        logSecurityEvent({
+          event: "session_invalidated_token_version_mismatch",
+          severity: "warn",
+          context: { userId: token.id ?? null },
+        });
+        delete token.id;
+        delete token.role;
+        delete token.tokenVersion;
+        token.isActive = false;
+        return token;
+      }
+
+      token.role = dbUser.role;
+      token.tokenVersion = dbUser.tokenVersion;
+      token.isActive = true;
       return token;
     },
     async session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.id as string;
-        session.user.role = token.role as Role;
+      if (!session.user || !token.id || token.isActive === false || !token.role) {
+        session.user = undefined;
+        return session;
       }
+
+      session.user.id = token.id;
+      session.user.role = token.role;
       return session;
     },
   },

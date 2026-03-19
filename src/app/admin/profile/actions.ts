@@ -49,7 +49,10 @@ export async function changePassword(
   const passwordHash = await hash(newPassword, 12);
   await prisma.user.update({
     where: { id: user.id },
-    data: { passwordHash },
+    data: {
+      passwordHash,
+      tokenVersion: { increment: 1 },
+    },
   });
 
   return { ok: true, message: "Parola güncellendi." };

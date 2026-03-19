@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { scanForMalware } from "@/lib/malwareScan";
 import { getClientIp, rateLimit } from "@/lib/rateLimit";
+import { logSecurityEvent } from "@/lib/securityLog";
 import { deleteImage, listImages, sanitizeUploadFolder, uploadImage } from "@/lib/uploadStorage";
 
 const MAX_FILE_SIZE = 6 * 1024 * 1024;
@@ -27,14 +28,33 @@ function parsePositiveInt(value: string | undefined, fallback: number) {
   return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : fallback;
 }
 
-async function authorizeUploadRequest() {
-  const requireAdmin = parseBoolean(process.env.UPLOAD_REQUIRE_ADMIN, true);
+function resolveUploadActionAdminRequirement(action: "get" | "post" | "delete") {
+  if (process.env.NODE_ENV === "production" && (action === "get" || action === "delete")) {
+    return true;
+  }
+
+  const fallback = parseBoolean(process.env.UPLOAD_REQUIRE_ADMIN, true);
+  const actionRaw = action === "get"
+    ? process.env.UPLOAD_GET_REQUIRE_ADMIN
+    : action === "post"
+      ? process.env.UPLOAD_POST_REQUIRE_ADMIN
+      : process.env.UPLOAD_DELETE_REQUIRE_ADMIN;
+  return parseBoolean(actionRaw, fallback);
+}
+
+async function authorizeUploadRequestForAction(action: "get" | "post" | "delete") {
+  const requireAdmin = resolveUploadActionAdminRequirement(action);
   const session = await getServerSession(authOptions);
   const userId = session?.user?.id ?? null;
   const userRole = session?.user?.role;
 
   if (requireAdmin) {
     if (!userId) {
+      logSecurityEvent({
+        event: "upload_unauthorized_no_session",
+        severity: "warn",
+        context: { action },
+      });
       return {
         userId,
         errorResponse: NextResponse.json({ success: 0, error: "Oturum gerekli." }, { status: 401 }),
@@ -42,6 +62,11 @@ async function authorizeUploadRequest() {
     }
 
     if (userRole !== "ADMIN") {
+      logSecurityEvent({
+        event: "upload_unauthorized_role_denied",
+        severity: "warn",
+        context: { action, role: userRole ?? "unknown", userId },
+      });
       return {
         userId,
         errorResponse: NextResponse.json({ success: 0, error: "Bu işlem için yetkiniz yok." }, { status: 403 }),
@@ -72,6 +97,11 @@ async function enforceUploadRateLimit(request: Request, userId: string | null, n
     return null;
   }
 
+  logSecurityEvent({
+    event: "upload_rate_limited",
+    severity: "warn",
+    context: { namespace, userId, ip },
+  });
   const retryAfterSeconds = Math.max(1, Math.ceil((limiter.reset - Date.now()) / 1000));
   return NextResponse.json(
     { success: 0, error: `Çok fazla yükleme denemesi. ${retryAfterSeconds} saniye sonra tekrar deneyin.` },
@@ -79,6 +109,9 @@ async function enforceUploadRateLimit(request: Request, userId: string | null, n
       status: 429,
       headers: {
         "Retry-After": String(retryAfterSeconds),
+        "X-RateLimit-Limit": String(rateLimitMax),
+        "X-RateLimit-Remaining": String(limiter.remaining),
+        "X-RateLimit-Reset": String(Math.floor(limiter.reset / 1000)),
       },
     },
   );
@@ -133,7 +166,7 @@ function detectImageMime(buffer: Buffer): string | null {
 }
 
 export async function handleUploadPost(request: Request) {
-  const authResult = await authorizeUploadRequest();
+  const authResult = await authorizeUploadRequestForAction("post");
   if (authResult.errorResponse) {
     return authResult.errorResponse;
   }
@@ -164,6 +197,11 @@ export async function handleUploadPost(request: Request) {
     const buffer = Buffer.from(await file.arrayBuffer());
     const detectedMime = detectImageMime(buffer);
     if (!detectedMime || !ALLOWED_TYPES.has(detectedMime)) {
+      logSecurityEvent({
+        event: "upload_rejected_invalid_mime",
+        severity: "warn",
+        context: { claimedMime: file.type, detectedMime: detectedMime ?? "unknown", folder },
+      });
       return NextResponse.json(
         { success: 0, error: "Dosya içeriği geçerli bir görsel değil." },
         { status: 400 },
@@ -171,6 +209,11 @@ export async function handleUploadPost(request: Request) {
     }
 
     if (file.type && file.type !== detectedMime) {
+      logSecurityEvent({
+        event: "upload_rejected_mime_mismatch",
+        severity: "warn",
+        context: { claimedMime: file.type, detectedMime, folder },
+      });
       return NextResponse.json(
         { success: 0, error: "MIME bilgisi dosya içeriğiyle uyuşmuyor." },
         { status: 400 },
@@ -179,6 +222,11 @@ export async function handleUploadPost(request: Request) {
 
     const scanResult = await scanForMalware(buffer);
     if (scanResult.status === "infected") {
+      logSecurityEvent({
+        event: "upload_rejected_malware",
+        severity: "warn",
+        context: { signature: scanResult.signature, folder },
+      });
       return NextResponse.json(
         { success: 0, error: `Dosya zararlı olarak işaretlendi (${scanResult.signature}).` },
         { status: 400 },
@@ -200,6 +248,11 @@ export async function handleUploadPost(request: Request) {
       },
     });
   } catch (error) {
+    logSecurityEvent({
+      event: "upload_post_failed",
+      severity: "error",
+      context: { message: error instanceof Error ? error.message : "unknown" },
+    });
     console.error("Upload failed:", error);
     return NextResponse.json(
       { success: 0, error: "Yükleme sırasında bir hata oluştu." },
@@ -209,7 +262,7 @@ export async function handleUploadPost(request: Request) {
 }
 
 export async function handleUploadDelete(request: Request) {
-  const authResult = await authorizeUploadRequest();
+  const authResult = await authorizeUploadRequestForAction("delete");
   if (authResult.errorResponse) {
     return authResult.errorResponse;
   }
@@ -247,6 +300,11 @@ export async function handleUploadDelete(request: Request) {
       },
     });
   } catch (error) {
+    logSecurityEvent({
+      event: "upload_delete_failed",
+      severity: "error",
+      context: { message: error instanceof Error ? error.message : "unknown" },
+    });
     console.error("Upload delete failed:", error);
     const message = error instanceof Error ? error.message : "Silme sırasında bir hata oluştu.";
     const status = message.includes("çözümlenemedi") ? 400 : 500;
@@ -258,7 +316,7 @@ export async function handleUploadDelete(request: Request) {
 }
 
 export async function handleUploadGet(request: Request) {
-  const authResult = await authorizeUploadRequest();
+  const authResult = await authorizeUploadRequestForAction("get");
   if (authResult.errorResponse) {
     return authResult.errorResponse;
   }
@@ -275,6 +333,11 @@ export async function handleUploadGet(request: Request) {
       files,
     });
   } catch (error) {
+    logSecurityEvent({
+      event: "upload_list_failed",
+      severity: "error",
+      context: { message: error instanceof Error ? error.message : "unknown", folder, limit },
+    });
     console.error("Upload list failed:", error);
     return NextResponse.json(
       { success: 0, error: "Dosyalar listelenirken bir hata oluştu." },

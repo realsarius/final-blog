@@ -40,6 +40,20 @@ type RateLimitOptions = {
   namespace?: string;
 };
 
+function parseBoolean(value: string | undefined, fallback: boolean) {
+  if (value === undefined) {
+    return fallback;
+  }
+  const normalized = value.trim().toLowerCase();
+  if (["1", "true", "yes", "on"].includes(normalized)) {
+    return true;
+  }
+  if (["0", "false", "no", "off"].includes(normalized)) {
+    return false;
+  }
+  return fallback;
+}
+
 function toPositiveInteger(value: unknown, fallback: number) {
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : fallback;
@@ -100,27 +114,43 @@ export function getClientIp(req?: { headers?: Headers | Record<string, string | 
     return "unknown";
   }
 
+  const trustProxyHeaders = parseBoolean(
+    process.env.RATE_LIMIT_TRUST_PROXY_HEADERS,
+    process.env.NODE_ENV !== "production",
+  );
+  if (!trustProxyHeaders) {
+    return "unknown";
+  }
+
+  const preferredHeader = (process.env.RATE_LIMIT_PREFERRED_IP_HEADER ?? "x-forwarded-for")
+    .trim()
+    .toLowerCase();
+
+  const selectIp = (value: string | null | undefined) => value?.split(",")[0]?.trim() || "unknown";
+
   if (req.headers instanceof Headers) {
-    const forwarded = req.headers.get("x-forwarded-for");
-    const realIp = req.headers.get("x-real-ip");
-    return forwarded?.split(",")[0]?.trim() || realIp || "unknown";
+    const forwarded = selectIp(req.headers.get("x-forwarded-for"));
+    const realIp = selectIp(req.headers.get("x-real-ip"));
+    if (preferredHeader === "x-real-ip") {
+      return realIp !== "unknown" ? realIp : forwarded;
+    }
+    return forwarded !== "unknown" ? forwarded : realIp;
   }
 
-  const forwarded = req.headers["x-forwarded-for"];
-  if (Array.isArray(forwarded)) {
-    return forwarded[0]?.split(",")[0]?.trim() || "unknown";
+  const forwardedRaw = req.headers["x-forwarded-for"];
+  const realIpRaw = req.headers["x-real-ip"];
+  const forwarded = Array.isArray(forwardedRaw)
+    ? selectIp(forwardedRaw[0])
+    : typeof forwardedRaw === "string"
+      ? selectIp(forwardedRaw)
+      : "unknown";
+  const realIp = Array.isArray(realIpRaw)
+    ? selectIp(realIpRaw[0])
+    : typeof realIpRaw === "string"
+      ? selectIp(realIpRaw)
+      : "unknown";
+  if (preferredHeader === "x-real-ip") {
+    return realIp !== "unknown" ? realIp : forwarded;
   }
-  if (typeof forwarded === "string") {
-    return forwarded.split(",")[0]?.trim() || "unknown";
-  }
-
-  const realIp = req.headers["x-real-ip"];
-  if (Array.isArray(realIp)) {
-    return realIp[0] ?? "unknown";
-  }
-  if (typeof realIp === "string") {
-    return realIp || "unknown";
-  }
-
-  return "unknown";
+  return forwarded !== "unknown" ? forwarded : realIp;
 }
