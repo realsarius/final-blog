@@ -1,8 +1,7 @@
 "use server";
 
-import { getServerSession } from "next-auth";
 import { compare, hash } from "bcryptjs";
-import { authOptions } from "@/lib/auth";
+import { requireAdminSession } from "@/lib/adminAuth";
 import { prisma } from "@/lib/prisma";
 import { passwordSchema } from "@/lib/validation";
 
@@ -15,10 +14,7 @@ export async function changePassword(
   _state: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return { ok: false, message: "Oturum bulunamadı." };
-  }
+  const session = await requireAdminSession("/admin/profile");
 
   const currentPassword = formData.get("currentPassword")?.toString() ?? "";
   const newPassword = formData.get("newPassword")?.toString() ?? "";

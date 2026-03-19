@@ -2,12 +2,14 @@ import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { requireAdminSession } from "@/lib/adminAuth";
 import { formatDate } from "@/lib/format";
 import ConfirmDeleteForm from "@/components/admin/ConfirmDeleteForm";
 import styles from "./page.module.css";
 
 async function deletePost(formData: FormData) {
   "use server";
+  await requireAdminSession("/admin/posts");
   const id = formData.get("id")?.toString();
   if (!id) {
     return;
@@ -20,6 +22,7 @@ async function deletePost(formData: FormData) {
 }
 
 export default async function AdminPostsPage() {
+  await requireAdminSession("/admin/posts");
   const posts = await prisma.post.findMany({
     orderBy: [{ createdAt: "desc" }],
   });

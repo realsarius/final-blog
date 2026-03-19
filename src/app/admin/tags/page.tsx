@@ -2,12 +2,14 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/slug";
+import { requireAdminSession } from "@/lib/adminAuth";
 import { getFirstErrorMessage, nameSchema } from "@/lib/validation";
 import ConfirmDeleteForm from "@/components/admin/ConfirmDeleteForm";
 import styles from "./page.module.css";
 
 async function addTag(formData: FormData) {
   "use server";
+  await requireAdminSession("/admin/tags");
   const name = formData.get("name")?.toString().trim() ?? "";
   const validation = nameSchema.safeParse(name);
   if (!validation.success) {
@@ -30,6 +32,7 @@ async function addTag(formData: FormData) {
 
 async function updateTag(formData: FormData) {
   "use server";
+  await requireAdminSession("/admin/tags");
   const id = formData.get("id")?.toString();
   const name = formData.get("name")?.toString().trim() ?? "";
   if (!id || !name) {
@@ -71,6 +74,7 @@ async function updateTag(formData: FormData) {
 
 async function deleteTag(formData: FormData) {
   "use server";
+  await requireAdminSession("/admin/tags");
   const id = formData.get("id")?.toString();
   if (!id) {
     return;
@@ -86,6 +90,7 @@ export default async function TagsPage({
 }: {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  await requireAdminSession("/admin/tags");
   const resolvedSearchParams = (await searchParams) ?? {};
   const error =
     typeof resolvedSearchParams.error === "string"

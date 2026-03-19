@@ -2,12 +2,14 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/slug";
+import { requireAdminSession } from "@/lib/adminAuth";
 import { getFirstErrorMessage, nameSchema } from "@/lib/validation";
 import ConfirmDeleteForm from "@/components/admin/ConfirmDeleteForm";
 import styles from "./page.module.css";
 
 async function addCategory(formData: FormData) {
   "use server";
+  await requireAdminSession("/admin/categories");
   const name = formData.get("name")?.toString().trim() ?? "";
   const validation = nameSchema.safeParse(name);
   if (!validation.success) {
@@ -30,6 +32,7 @@ async function addCategory(formData: FormData) {
 
 async function updateCategory(formData: FormData) {
   "use server";
+  await requireAdminSession("/admin/categories");
   const id = formData.get("id")?.toString();
   const name = formData.get("name")?.toString().trim() ?? "";
   if (!id || !name) {
@@ -71,6 +74,7 @@ async function updateCategory(formData: FormData) {
 
 async function deleteCategory(formData: FormData) {
   "use server";
+  await requireAdminSession("/admin/categories");
   const id = formData.get("id")?.toString();
   if (!id) {
     return;
@@ -86,6 +90,7 @@ export default async function CategoriesPage({
 }: {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  await requireAdminSession("/admin/categories");
   const resolvedSearchParams = (await searchParams) ?? {};
   const error =
     typeof resolvedSearchParams.error === "string"

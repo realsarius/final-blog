@@ -1,9 +1,8 @@
 import { notFound, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/slug";
-import { authOptions } from "@/lib/auth";
+import { requireAdminSession } from "@/lib/adminAuth";
 import { getFirstErrorMessage, postSchema, splitCommaList } from "@/lib/validation";
 import styles from "../../post-form.module.css";
 import EditorField from "../../EditorField";
@@ -25,10 +24,7 @@ async function generateUniquePostSlug(base: string, currentId: string) {
 
 async function updatePost(formData: FormData) {
   "use server";
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    redirect("/login?callbackUrl=/admin/posts");
-  }
+  await requireAdminSession("/admin/posts");
 
   const id = formData.get("id")?.toString() ?? "";
   const title = formData.get("title")?.toString() ?? "";
