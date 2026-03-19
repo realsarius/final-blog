@@ -48,9 +48,39 @@
   resize: vertical;
 }
 
+.coverDropZone {
+  position: relative;
+  border-radius: var(--radius-sm);
+  transition: outline 0.15s ease;
+}
+
+.coverDropZoneActive {
+  outline: 2px dashed var(--text-muted, #8a8070);
+  outline-offset: 3px;
+}
+
+.coverDropOverlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(244, 239, 230, 0.88);
+  border-radius: var(--radius-sm);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.coverDropOverlay span {
+  font-size: 13px;
+  color: var(--text);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
 .coverUploadRow {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: 1fr auto auto;
   gap: var(--space-2);
 }
 
@@ -70,8 +100,55 @@
   cursor: not-allowed;
 }
 
+.coverRemoveAction {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: #fffdfa;
+  color: var(--muted);
+  padding: 10px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.coverRemoveAction:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.coverUploadHint {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
 .coverFileInput {
   display: none;
+}
+
+.coverPreview {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: #faf7f1;
+  overflow: hidden;
+}
+
+.coverPreviewImage {
+  display: block;
+  width: 100%;
+  max-height: 320px;
+  object-fit: cover;
+}
+
+@media (max-width: 700px) {
+  .coverUploadRow {
+    grid-template-columns: 1fr;
+  }
+
+  .coverUploadAction,
+  .coverRemoveAction {
+    width: 100%;
+  }
 }
 
 .markdownField {

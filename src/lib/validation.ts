@@ -11,12 +11,32 @@ const contentSchema = z.string().trim().superRefine((value, ctx) => {
   }
 });
 
+function isValidCoverImageValue(value: string) {
+  if (!value) {
+    return true;
+  }
+
+  if (value.startsWith("/")) {
+    return true;
+  }
+
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 export const postSchema = z.object({
   title: z.string().trim().min(3, "Başlık en az 3 karakter olmalı."),
   slug: z.string().trim().optional(),
   excerpt: z.string().trim().max(300, "Özet en fazla 300 karakter olmalı.").optional(),
   content: contentSchema,
-  coverImageUrl: z.string().trim().url("Kapak görseli URL formatı geçersiz.").optional().or(z.literal("")),
+  coverImageUrl: z.string().trim().refine(
+    (value) => isValidCoverImageValue(value),
+    "Kapak görseli URL formatı geçersiz. Tam URL veya / ile başlayan yol girin.",
+  ).optional().or(z.literal("")),
   status: z.enum(["DRAFT", "PUBLISHED"]),
   categories: z.array(z.string().trim()).default([]),
   tags: z.array(z.string().trim()).default([]),

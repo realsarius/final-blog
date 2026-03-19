@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { scanForMalware } from "@/lib/malwareScan";
 import { getClientIp, rateLimit } from "@/lib/rateLimit";
-import { sanitizeUploadFolder, uploadImage } from "@/lib/uploadStorage";
+import { deleteImage, listImages, sanitizeUploadFolder, uploadImage } from "@/lib/uploadStorage";
 
 const MAX_FILE_SIZE = 6 * 1024 * 1024;
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
@@ -25,6 +25,63 @@ function parseBoolean(value: string | undefined, fallback: boolean) {
 function parsePositiveInt(value: string | undefined, fallback: number) {
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : fallback;
+}
+
+async function authorizeUploadRequest() {
+  const requireAdmin = parseBoolean(process.env.UPLOAD_REQUIRE_ADMIN, true);
+  const session = await getServerSession(authOptions);
+  const userId = session?.user?.id ?? null;
+  const userRole = session?.user?.role;
+
+  if (requireAdmin) {
+    if (!userId) {
+      return {
+        userId,
+        errorResponse: NextResponse.json({ success: 0, error: "Oturum gerekli." }, { status: 401 }),
+      };
+    }
+
+    if (userRole !== "ADMIN") {
+      return {
+        userId,
+        errorResponse: NextResponse.json({ success: 0, error: "Bu işlem için yetkiniz yok." }, { status: 403 }),
+      };
+    }
+  }
+
+  return { userId, errorResponse: null as NextResponse<unknown> | null };
+}
+
+async function enforceUploadRateLimit(request: Request, userId: string | null, namespace: string) {
+  const rateLimitMax = parsePositiveInt(process.env.UPLOAD_RATE_LIMIT_MAX, 30);
+  const rateLimitWindow = parsePositiveInt(process.env.UPLOAD_RATE_LIMIT_WINDOW_SEC, 60);
+
+  if (rateLimitMax <= 0) {
+    return null;
+  }
+
+  const ip = getClientIp({ headers: request.headers });
+  const limiterKey = userId ? `user:${userId}` : `ip:${ip}`;
+  const limiter = await rateLimit(limiterKey, {
+    namespace,
+    maxAttempts: rateLimitMax,
+    windowSeconds: rateLimitWindow,
+  });
+
+  if (limiter.allowed) {
+    return null;
+  }
+
+  const retryAfterSeconds = Math.max(1, Math.ceil((limiter.reset - Date.now()) / 1000));
+  return NextResponse.json(
+    { success: 0, error: `Çok fazla yükleme denemesi. ${retryAfterSeconds} saniye sonra tekrar deneyin.` },
+    {
+      status: 429,
+      headers: {
+        "Retry-After": String(retryAfterSeconds),
+      },
+    },
+  );
 }
 
 function detectImageMime(buffer: Buffer): string | null {
@@ -76,43 +133,14 @@ function detectImageMime(buffer: Buffer): string | null {
 }
 
 export async function handleUploadPost(request: Request) {
-  const requireAdmin = parseBoolean(process.env.UPLOAD_REQUIRE_ADMIN, true);
-  const session = await getServerSession(authOptions);
-  const userId = session?.user?.id;
-  const userRole = session?.user?.role;
-
-  if (requireAdmin) {
-    if (!userId) {
-      return NextResponse.json({ success: 0, error: "Oturum gerekli." }, { status: 401 });
-    }
-    if (userRole !== "ADMIN") {
-      return NextResponse.json({ success: 0, error: "Bu işlem için yetkiniz yok." }, { status: 403 });
-    }
+  const authResult = await authorizeUploadRequest();
+  if (authResult.errorResponse) {
+    return authResult.errorResponse;
   }
 
-  const rateLimitMax = parsePositiveInt(process.env.UPLOAD_RATE_LIMIT_MAX, 30);
-  const rateLimitWindow = parsePositiveInt(process.env.UPLOAD_RATE_LIMIT_WINDOW_SEC, 60);
-  if (rateLimitMax > 0) {
-    const ip = getClientIp({ headers: request.headers });
-    const limiterKey = userId ? `user:${userId}` : `ip:${ip}`;
-    const limiter = await rateLimit(limiterKey, {
-      namespace: "upload",
-      maxAttempts: rateLimitMax,
-      windowSeconds: rateLimitWindow,
-    });
-
-    if (!limiter.allowed) {
-      const retryAfterSeconds = Math.max(1, Math.ceil((limiter.reset - Date.now()) / 1000));
-      return NextResponse.json(
-        { success: 0, error: `Çok fazla yükleme denemesi. ${retryAfterSeconds} saniye sonra tekrar deneyin.` },
-        {
-          status: 429,
-          headers: {
-            "Retry-After": String(retryAfterSeconds),
-          },
-        },
-      );
-    }
+  const rateLimitResponse = await enforceUploadRateLimit(request, authResult.userId, "upload");
+  if (rateLimitResponse) {
+    return rateLimitResponse;
   }
 
   const formData = await request.formData();
@@ -167,12 +195,89 @@ export async function handleUploadPost(request: Request) {
       success: 1,
       file: {
         url: uploaded.url,
+        key: uploaded.key,
+        provider: uploaded.provider,
       },
     });
   } catch (error) {
     console.error("Upload failed:", error);
     return NextResponse.json(
       { success: 0, error: "Yükleme sırasında bir hata oluştu." },
+      { status: 500 },
+    );
+  }
+}
+
+export async function handleUploadDelete(request: Request) {
+  const authResult = await authorizeUploadRequest();
+  if (authResult.errorResponse) {
+    return authResult.errorResponse;
+  }
+
+  const rateLimitResponse = await enforceUploadRateLimit(request, authResult.userId, "upload-delete");
+  if (rateLimitResponse) {
+    return rateLimitResponse;
+  }
+
+  let payload: unknown;
+  try {
+    payload = await request.json();
+  } catch {
+    return NextResponse.json({ success: 0, error: "Geçersiz istek gövdesi." }, { status: 400 });
+  }
+
+  const payloadData = payload && typeof payload === "object"
+    ? payload as { key?: unknown; url?: unknown }
+    : {};
+  const key = typeof payloadData.key === "string" ? payloadData.key : undefined;
+  const url = typeof payloadData.url === "string" ? payloadData.url : undefined;
+
+  if (!key && !url) {
+    return NextResponse.json({ success: 0, error: "Silinecek görsel bulunamadı." }, { status: 400 });
+  }
+
+  try {
+    const deleted = await deleteImage({ key, url });
+
+    return NextResponse.json({
+      success: 1,
+      file: {
+        key: deleted.key,
+        provider: deleted.provider,
+      },
+    });
+  } catch (error) {
+    console.error("Upload delete failed:", error);
+    const message = error instanceof Error ? error.message : "Silme sırasında bir hata oluştu.";
+    const status = message.includes("çözümlenemedi") ? 400 : 500;
+    return NextResponse.json(
+      { success: 0, error: status === 400 ? message : "Silme sırasında bir hata oluştu." },
+      { status },
+    );
+  }
+}
+
+export async function handleUploadGet(request: Request) {
+  const authResult = await authorizeUploadRequest();
+  if (authResult.errorResponse) {
+    return authResult.errorResponse;
+  }
+
+  const url = new URL(request.url);
+  const folder = sanitizeUploadFolder(url.searchParams.get("folder"));
+  const limitRaw = Number(url.searchParams.get("limit"));
+  const limit = Number.isFinite(limitRaw) && limitRaw > 0 ? Math.min(200, Math.floor(limitRaw)) : 60;
+
+  try {
+    const files = await listImages({ folder, limit });
+    return NextResponse.json({
+      success: 1,
+      files,
+    });
+  } catch (error) {
+    console.error("Upload list failed:", error);
+    return NextResponse.json(
+      { success: 0, error: "Dosyalar listelenirken bir hata oluştu." },
       { status: 500 },
     );
   }
