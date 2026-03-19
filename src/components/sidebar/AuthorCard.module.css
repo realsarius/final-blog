@@ -1,11 +1,95 @@
 .card {
+  position: relative;
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   overflow: hidden;
   background: var(--surface);
 }
 
+.editButton {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 3;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(250, 247, 242, 0.58);
+  border-radius: 999px;
+  background: rgba(20, 24, 18, 0.42);
+  color: rgba(250, 247, 242, 0.95);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.editButton svg {
+  width: 17px;
+  height: 17px;
+}
+
+.editorPanel {
+  position: absolute;
+  top: 52px;
+  right: 10px;
+  left: 10px;
+  z-index: 3;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--surface) 95%, #ffffff 5%);
+  padding: 10px;
+  display: grid;
+  gap: 10px;
+  box-shadow: 0 12px 28px rgba(15, 18, 12, 0.18);
+}
+
+.uploadButton {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  padding: 7px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  text-align: center;
+}
+
+.uploadButton input {
+  display: none;
+}
+
+.sliderRow {
+  display: grid;
+  gap: 5px;
+}
+
+.sliderRow label {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.sliderRow input {
+  width: 100%;
+}
+
+.editorActions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.editorActions button {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: var(--text-light);
+  padding: 6px 11px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
 .avatarWrap {
+  position: relative;
   width: 100%;
   aspect-ratio: 3 / 4;
   overflow: hidden;

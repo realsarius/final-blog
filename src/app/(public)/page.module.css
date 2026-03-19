@@ -6,12 +6,14 @@
   position: relative;
   background-color: var(--bg);
   background-image: none;
+  --hero-title-left: #9eae7b;
+  --hero-title-right: #536546;
   /* overflow: hidden kaldırıldı — heroCard aşağı taşıyor */
   --hero-section-height: 560px;
   height: var(--hero-section-height);
   padding-bottom: var(--space-6);
   transition: height 320ms ease, padding-bottom 180ms ease;
-  --hero-title-size: clamp(60px, 11vw, 148px);
+  --hero-title-size: clamp(52px, 9.6vw, 128px);
 }
 
 .heroMedia {
@@ -78,7 +80,17 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
   line-height: 0.88;
-  color: color-mix(in srgb, var(--line) 82%, #f5f0e8 18%);
+  background-image: linear-gradient(
+    90deg,
+    var(--hero-title-left) 0%,
+    color-mix(in srgb, var(--hero-title-left) 50%, var(--hero-title-right) 50%) 48%,
+    var(--hero-title-right) 100%
+  );
+  background-size: cover;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
   position: absolute;
   inset: 0;
   display: flex;
@@ -90,6 +102,8 @@
   pointer-events: none;
   z-index: 1;
   height: max-content;
+  opacity: 0.46;
+  transition: opacity 220ms ease;
 }
 
 /* Hero içerik — tek sütun, metin sol hizalı */
@@ -119,21 +133,10 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
   line-height: 0.88;
-  transition: font-size 180ms ease, opacity 180ms ease;
-  background-image: linear-gradient(
-    145deg,
-    #8fa06a 0%,
-    #6b7c4d 25%,
-    #2e3a2a 55%,
-    #4e5c36 80%,
-    #7d9059 100%
-  );
-  background-size: cover;
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  color: transparent;
+  transition: font-size 180ms ease, opacity 180ms ease, color 220ms ease;
+  color: color-mix(in srgb, var(--line) 82%, #f5f0e8 18%);
   width: max-content;
+  opacity: 0.9;
 }
 
 .heroText:hover .heroClipped {
@@ -141,7 +144,7 @@
 }
 
 .heroSection:hover .heroGhost {
-  opacity: 0.12;
+  opacity: 0.08;
 }
 
 .heroAuthor {
@@ -304,6 +307,24 @@
   text-transform: uppercase;
 }
 
+.heroBlockHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.heroBlockHeader button {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  padding: 6px 10px;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
 .heroComposerRow {
   display: grid;
   gap: 6px;
@@ -389,7 +410,7 @@
   align-items: center;
 }
 
-.heroSlideRow img {
+.heroSlideThumb {
   width: 72px;
   height: 48px;
   object-fit: cover;
@@ -401,6 +422,32 @@
   margin: 4px 0 0;
   color: var(--muted);
   font-size: 12px;
+}
+
+.heroColorRow {
+  margin-top: 8px;
+  display: flex;
+  gap: 10px;
+}
+
+.heroColorRow label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.heroColorRow input {
+  width: 26px;
+  height: 22px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
 }
 
 .heroSlideRowActions {
@@ -463,11 +510,13 @@
 }
 
 .heroImageTile {
+  position: relative;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   overflow: hidden;
   background: var(--surface);
   cursor: pointer;
+  aspect-ratio: 16 / 10;
 }
 
 .heroImageTileSelected {
@@ -475,9 +524,9 @@
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 25%, transparent);
 }
 
-.heroImageTile img {
+.heroImage {
   width: 100%;
-  aspect-ratio: 16 / 10;
+  height: 100%;
   object-fit: cover;
 }
 

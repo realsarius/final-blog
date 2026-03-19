@@ -1,5 +1,6 @@
 import DOMPurify from "isomorphic-dompurify";
 import type { ElementType } from "react";
+import Image from "next/image";
 import { parseEditorContent } from "@/lib/content";
 
 type EditorRendererProps = {
@@ -220,9 +221,13 @@ export default function EditorRenderer({ content }: EditorRendererProps) {
                   overflow: "hidden",
                 }}
               >
-                <img
+                <Image
                   src={url}
                   alt={caption || "Görsel"}
+                  width={1200}
+                  height={800}
+                  unoptimized
+                  sizes="(max-width: 900px) 100vw, 760px"
                   style={{
                     display: "block",
                     maxWidth: "100%",

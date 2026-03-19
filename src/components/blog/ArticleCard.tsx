@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { formatDate } from "@/lib/format";
 import { getContentText } from "@/lib/content";
 import { formatReadingTime } from "@/lib/readingTime";
@@ -37,9 +38,11 @@ export default function ArticleCard({
     <article className={`${styles.card} ${hasImage ? styles.hasImage : styles.noImage}`}>
       {post.coverImageUrl && (
         <Link href={`/blog/${post.slug}`} className={styles.imageWrap}>
-          <img
+          <Image
             src={post.coverImageUrl}
             alt={post.title}
+            fill
+            sizes="(max-width: 600px) 100vw, 220px"
             className={styles.image}
           />
         </Link>

@@ -19,6 +19,7 @@
 }
 
 .imageWrap {
+  position: relative;
   display: block;
   overflow: hidden;
   border-radius: var(--radius-sm);

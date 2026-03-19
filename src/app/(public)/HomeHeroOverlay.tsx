@@ -1,13 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import styles from "./page.module.css";
 
 type HeroSlide = {
   id?: string;
   imageUrl: string;
   postId?: string | null;
+  titleColorLeft?: string | null;
+  titleColorRight?: string | null;
   postTitle?: string | null;
   postSlug?: string | null;
   postExcerpt?: string | null;
@@ -49,6 +52,8 @@ type SaveHeroResponse = {
     id: string;
     imageUrl: string;
     postId: string | null;
+    titleColorLeft?: string | null;
+    titleColorRight?: string | null;
     post: {
       id: string;
       title: string;
@@ -68,6 +73,8 @@ const GENERIC_COVER_URL = "/hero-generic-cover.svg";
 const MIN_AUTOPLAY_SECONDS = 2;
 const MAX_AUTOPLAY_SECONDS = 60;
 const HERO_ANIMATION_MS = 520;
+const DEFAULT_TITLE_COLOR_LEFT = "#9eae7b";
+const DEFAULT_TITLE_COLOR_RIGHT = "#536546";
 
 type HeroTransitionDirection = "left" | "right";
 
@@ -94,6 +101,20 @@ function sanitizeDirection(value: unknown): HeroTransitionDirection {
   return value === "right" ? "right" : "left";
 }
 
+function normalizeHexColor(value: unknown) {
+  if (typeof value !== "string") {
+    return null;
+  }
+  const trimmed = value.trim().toLowerCase();
+  if (!trimmed) {
+    return null;
+  }
+  if (!/^#[0-9a-f]{6}$/.test(trimmed)) {
+    return null;
+  }
+  return trimmed;
+}
+
 export default function HomeHeroOverlay({ initialSlides, initialSettings, availablePosts, isAdmin }: HomeHeroOverlayProps) {
   const [slides, setSlides] = useState<HeroSlide[]>(initialSlides);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -116,8 +137,11 @@ export default function HomeHeroOverlay({ initialSlides, initialSettings, availa
   const [transitionDirection, setTransitionDirection] = useState<HeroTransitionDirection>(
     sanitizeDirection(initialSettings.transitionDirection),
   );
+  const [colorLoadingIndex, setColorLoadingIndex] = useState<number | null>(null);
   const previousActiveIndexRef = useRef(0);
   const animationTimerRef = useRef<number | null>(null);
+  const paletteCacheRef = useRef<Record<string, { left: string; right: string }>>({});
+  const palettePendingRef = useRef<Record<string, Promise<{ left: string; right: string }>>>({});
 
   const activeSlide = slides[activeIndex] ?? null;
   const previousSlide = previousIndex !== null ? slides[previousIndex] ?? null : null;
@@ -174,6 +198,17 @@ export default function HomeHeroOverlay({ initialSlides, initialSettings, availa
     setActiveIndex(0);
   }, [activeIndex, slides.length]);
 
+  useEffect(() => {
+    const hero = document.getElementById("home-hero");
+    if (!hero) {
+      return;
+    }
+    const left = normalizeHexColor(activeSlide?.titleColorLeft) ?? DEFAULT_TITLE_COLOR_LEFT;
+    const right = normalizeHexColor(activeSlide?.titleColorRight) ?? DEFAULT_TITLE_COLOR_RIGHT;
+    hero.style.setProperty("--hero-title-left", left);
+    hero.style.setProperty("--hero-title-right", right);
+  }, [activeSlide?.titleColorLeft, activeSlide?.titleColorRight]);
+
   function backgroundStyle(imageUrl: string | undefined) {
     if (!imageUrl) {
       return undefined;
@@ -190,6 +225,161 @@ export default function HomeHeroOverlay({ initialSlides, initialSettings, availa
     }
     setActiveIndex(index);
   }
+
+  function updateSlideColors(index: number, nextLeft: string | null, nextRight: string | null) {
+    setSlides((current) => current.map((slide, itemIndex) => (
+      itemIndex === index
+        ? {
+          ...slide,
+          titleColorLeft: normalizeHexColor(nextLeft),
+          titleColorRight: normalizeHexColor(nextRight),
+        }
+        : slide
+    )));
+  }
+
+  const getAverageColor = useCallback((data: Uint8ClampedArray, width: number, height: number, fromX: number, toX: number) => {
+    let r = 0;
+    let g = 0;
+    let b = 0;
+    let count = 0;
+
+    for (let y = 0; y < height; y += 1) {
+      for (let x = fromX; x < toX; x += 1) {
+        const offset = (y * width + x) * 4;
+        r += data[offset] ?? 0;
+        g += data[offset + 1] ?? 0;
+        b += data[offset + 2] ?? 0;
+        count += 1;
+      }
+    }
+
+    if (count === 0) {
+      return "#7f8c6a";
+    }
+
+    const rr = Math.round(r / count).toString(16).padStart(2, "0");
+    const gg = Math.round(g / count).toString(16).padStart(2, "0");
+    const bb = Math.round(b / count).toString(16).padStart(2, "0");
+    return `#${rr}${gg}${bb}`;
+  }, []);
+
+  const deriveTitleColorsFromImage = useCallback(async (imageUrl: string) => {
+    return new Promise<{ left: string; right: string }>((resolve) => {
+      const image = new Image();
+      image.crossOrigin = "anonymous";
+
+      image.onload = () => {
+        try {
+          const width = Math.min(320, Math.max(32, image.naturalWidth || image.width));
+          const height = Math.min(180, Math.max(32, image.naturalHeight || image.height));
+          const canvas = document.createElement("canvas");
+          canvas.width = width;
+          canvas.height = height;
+          const context = canvas.getContext("2d");
+          if (!context) {
+            resolve({ left: DEFAULT_TITLE_COLOR_LEFT, right: DEFAULT_TITLE_COLOR_RIGHT });
+            return;
+          }
+          context.drawImage(image, 0, 0, width, height);
+          const pixels = context.getImageData(0, 0, width, height).data;
+          const band = Math.max(1, Math.floor(width * 0.24));
+          const left = getAverageColor(pixels, width, height, 0, band);
+          const right = getAverageColor(pixels, width, height, width - band, width);
+          resolve({ left, right });
+        } catch {
+          resolve({ left: DEFAULT_TITLE_COLOR_LEFT, right: DEFAULT_TITLE_COLOR_RIGHT });
+        }
+      };
+
+      image.onerror = () => resolve({ left: DEFAULT_TITLE_COLOR_LEFT, right: DEFAULT_TITLE_COLOR_RIGHT });
+      image.src = imageUrl;
+    });
+  }, [getAverageColor]);
+
+  const deriveTitleColorsFromImageCached = useCallback(async (imageUrl: string) => {
+    const cached = paletteCacheRef.current[imageUrl];
+    if (cached) {
+      return cached;
+    }
+    const pending = palettePendingRef.current[imageUrl];
+    if (pending) {
+      return pending;
+    }
+
+    const task = deriveTitleColorsFromImage(imageUrl).then((palette) => {
+      paletteCacheRef.current[imageUrl] = palette;
+      delete palettePendingRef.current[imageUrl];
+      return palette;
+    });
+    palettePendingRef.current[imageUrl] = task;
+    return task;
+  }, [deriveTitleColorsFromImage]);
+
+  async function autoPickSlideColors(index: number) {
+    const slide = slides[index];
+    if (!slide?.imageUrl) {
+      return;
+    }
+    setColorLoadingIndex(index);
+    try {
+      const palette = await deriveTitleColorsFromImageCached(slide.imageUrl);
+      updateSlideColors(index, palette.left, palette.right);
+    } finally {
+      setColorLoadingIndex(null);
+    }
+  }
+
+  async function autoPickAllSlideColors() {
+    for (let index = 0; index < slides.length; index += 1) {
+      await autoPickSlideColors(index);
+    }
+  }
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function fillMissingColors() {
+      for (let index = 0; index < slides.length; index += 1) {
+        const slide = slides[index];
+        if (!slide?.imageUrl) {
+          continue;
+        }
+        if (normalizeHexColor(slide.titleColorLeft) && normalizeHexColor(slide.titleColorRight)) {
+          continue;
+        }
+
+        const palette = await deriveTitleColorsFromImageCached(slide.imageUrl);
+        if (cancelled) {
+          return;
+        }
+
+        setSlides((current) => {
+          const target = current[index];
+          if (!target) {
+            return current;
+          }
+          const hasLeft = normalizeHexColor(target.titleColorLeft);
+          const hasRight = normalizeHexColor(target.titleColorRight);
+          if (hasLeft && hasRight) {
+            return current;
+          }
+          const copy = [...current];
+          copy[index] = {
+            ...target,
+            titleColorLeft: hasLeft ?? palette.left,
+            titleColorRight: hasRight ?? palette.right,
+          };
+          return copy;
+        });
+      }
+    }
+
+    void fillMissingColors();
+    return () => {
+      cancelled = true;
+    };
+  }, [deriveTitleColorsFromImageCached, slides]);
 
   async function loadLibrary(folder = libraryFolder) {
     if (!isAdmin) {
@@ -263,9 +453,13 @@ export default function HomeHeroOverlay({ initialSlides, initialSettings, availa
       }
     }
 
+    const palette = await deriveTitleColorsFromImageCached(imageUrl);
+
     addSlide({
       imageUrl,
       postId: selectedPost?.id ?? null,
+      titleColorLeft: palette.left,
+      titleColorRight: palette.right,
       postTitle: selectedPost?.title ?? null,
       postSlug: selectedPost?.slug ?? null,
       postExcerpt: selectedPost?.excerpt ?? null,
@@ -350,6 +544,8 @@ export default function HomeHeroOverlay({ initialSlides, initialSettings, availa
           slides: slides.map((slide) => ({
             imageUrl: slide.imageUrl,
             postId: slide.postId ?? null,
+            titleColorLeft: normalizeHexColor(slide.titleColorLeft),
+            titleColorRight: normalizeHexColor(slide.titleColorRight),
           })),
           settings: {
             autoplaySeconds: normalizeAutoplaySeconds(autoplaySeconds),
@@ -367,6 +563,8 @@ export default function HomeHeroOverlay({ initialSlides, initialSettings, availa
         id: slide.id,
         imageUrl: slide.imageUrl,
         postId: slide.postId,
+        titleColorLeft: normalizeHexColor(slide.titleColorLeft),
+        titleColorRight: normalizeHexColor(slide.titleColorRight),
         postTitle: slide.post?.title ?? null,
         postSlug: slide.post?.slug ?? null,
         postExcerpt: slide.post?.excerpt ?? null,
@@ -412,9 +610,11 @@ export default function HomeHeroOverlay({ initialSlides, initialSettings, availa
         activeSlide.postSlug ? (
           <div className={styles.heroActivePost} aria-live="polite">
             <Link href={`/blog/${activeSlide.postSlug}`} className={styles.heroActiveCard}>
-              <img
+              <Image
                 src={activeSlide.postCoverImageUrl ?? GENERIC_COVER_URL}
                 alt={activeSlide.postTitle ?? "One cikan yazi"}
+                width={68}
+                height={68}
                 className={styles.heroActiveThumb}
               />
               <span className={styles.heroActiveMeta}>
@@ -516,18 +716,62 @@ export default function HomeHeroOverlay({ initialSlides, initialSettings, availa
                 </div>
 
                 <div className={styles.heroEditorBlock}>
-                  <h4>Secili Slaytlar</h4>
+                  <div className={styles.heroBlockHeader}>
+                    <h4>Secili Slaytlar</h4>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void autoPickAllSlideColors();
+                      }}
+                      disabled={slides.length === 0 || colorLoadingIndex !== null}
+                    >
+                      Tumune Oto Renk
+                    </button>
+                  </div>
                   {slides.length === 0 ? <p>Henuz slayt eklenmedi.</p> : null}
                   {slides.map((slide, index) => (
                     <div key={`${slide.imageUrl}-${slide.postId ?? "none"}-${index}`} className={styles.heroSlideRow}>
-                      <img src={slide.imageUrl} alt="Hero slide" />
+                      <Image
+                        src={slide.imageUrl}
+                        alt="Hero slide"
+                        width={72}
+                        height={48}
+                        className={styles.heroSlideThumb}
+                      />
                       <div>
                         <strong>{slide.postTitle ?? "Bagimsiz gorsel"}</strong>
                         <p>{slide.postSlug ? `/blog/${slide.postSlug}` : "Yazi bagi yok"}</p>
+                        <div className={styles.heroColorRow}>
+                          <label>
+                            Sol
+                            <input
+                              type="color"
+                              value={normalizeHexColor(slide.titleColorLeft) ?? DEFAULT_TITLE_COLOR_LEFT}
+                              onChange={(event) => updateSlideColors(index, event.target.value, slide.titleColorRight ?? null)}
+                            />
+                          </label>
+                          <label>
+                            Sag
+                            <input
+                              type="color"
+                              value={normalizeHexColor(slide.titleColorRight) ?? DEFAULT_TITLE_COLOR_RIGHT}
+                              onChange={(event) => updateSlideColors(index, slide.titleColorLeft ?? null, event.target.value)}
+                            />
+                          </label>
+                        </div>
                       </div>
                       <div className={styles.heroSlideRowActions}>
                         <button type="button" onClick={() => moveSlide(index, -1)} aria-label="Yukari al">↑</button>
                         <button type="button" onClick={() => moveSlide(index, 1)} aria-label="Asagi al">↓</button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            void autoPickSlideColors(index);
+                          }}
+                          disabled={colorLoadingIndex === index}
+                        >
+                          {colorLoadingIndex === index ? "Renk..." : "Oto Renk"}
+                        </button>
                         <button type="button" onClick={() => removeSlide(index)}>Sil</button>
                       </div>
                     </div>
@@ -627,7 +871,13 @@ export default function HomeHeroOverlay({ initialSlides, initialSettings, availa
                         onClick={() => setSelectedImageUrl(image.url)}
                         title={image.key}
                       >
-                        <img src={image.url} alt={image.key} loading="lazy" />
+                        <Image
+                          src={image.url}
+                          alt={image.key}
+                          fill
+                          sizes="(max-width: 900px) 33vw, 110px"
+                          className={styles.heroImage}
+                        />
                       </button>
                     ))}
                   </div>
