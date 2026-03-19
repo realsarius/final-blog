@@ -8,6 +8,8 @@ import { deleteImage, listImages, sanitizeUploadFolder, uploadImage } from "@/li
 
 const MAX_FILE_SIZE = 6 * 1024 * 1024;
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+const CORS_METHODS = "GET, POST, DELETE, OPTIONS";
+const CORS_HEADERS = "Content-Type, Authorization";
 
 function parseBoolean(value: string | undefined, fallback: boolean) {
   if (value === undefined) {
@@ -26,6 +28,76 @@ function parseBoolean(value: string | undefined, fallback: boolean) {
 function parsePositiveInt(value: string | undefined, fallback: number) {
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : fallback;
+}
+
+function parseOrigin(value: string | null | undefined): string | null {
+  if (!value) {
+    return null;
+  }
+
+  try {
+    return new URL(value).origin;
+  } catch {
+    return null;
+  }
+}
+
+function parseAllowedOrigins(value: string | undefined): Set<string> {
+  const origins = (value ?? "")
+    .split(",")
+    .map((item) => parseOrigin(item.trim()))
+    .filter((item): item is string => Boolean(item));
+  return new Set(origins);
+}
+
+function isPrivateNetworkOrigin(origin: string): boolean {
+  return /^https?:\/\/(?:localhost|127\.0\.0\.1|10(?:\.\d{1,3}){3}|192\.168(?:\.\d{1,3}){2}|172\.(?:1[6-9]|2\d|3[0-1])(?:\.\d{1,3}){2})(?::\d+)?$/i.test(origin);
+}
+
+function resolveCorsHeaders(request: Request): HeadersInit {
+  const requestOrigin = parseOrigin(request.headers.get("origin"));
+  if (!requestOrigin) {
+    return {};
+  }
+
+  const allowPrivateNetworkOrigins = parseBoolean(process.env.UPLOAD_CORS_ALLOW_PRIVATE_NETWORK, false);
+  const allowedOrigins = parseAllowedOrigins(process.env.UPLOAD_CORS_ALLOWED_ORIGINS);
+  const appOrigin = parseOrigin(process.env.NEXTAUTH_URL);
+  const publicSiteOrigin = parseOrigin(process.env.NEXT_PUBLIC_SITE_URL);
+
+  if (appOrigin) {
+    allowedOrigins.add(appOrigin);
+  }
+  if (publicSiteOrigin) {
+    allowedOrigins.add(publicSiteOrigin);
+  }
+
+  const isAllowed = allowedOrigins.has(requestOrigin)
+    || (allowPrivateNetworkOrigins && isPrivateNetworkOrigin(requestOrigin));
+
+  if (!isAllowed) {
+    return {};
+  }
+
+  return {
+    "Access-Control-Allow-Origin": requestOrigin,
+    "Access-Control-Allow-Credentials": "true",
+    "Access-Control-Allow-Methods": CORS_METHODS,
+    "Access-Control-Allow-Headers": CORS_HEADERS,
+    "Vary": "Origin",
+  };
+}
+
+function withCors(request: Request, response: NextResponse) {
+  const corsHeaders = resolveCorsHeaders(request);
+  Object.entries(corsHeaders).forEach(([key, value]) => {
+    response.headers.set(key, value);
+  });
+  return response;
+}
+
+function jsonWithCors(request: Request, body: unknown, init?: ResponseInit) {
+  return withCors(request, NextResponse.json(body, init));
 }
 
 function resolveUploadActionAdminRequirement(action: "get" | "post" | "delete") {
@@ -57,7 +129,7 @@ async function authorizeUploadRequestForAction(action: "get" | "post" | "delete"
       });
       return {
         userId,
-        errorResponse: NextResponse.json({ success: 0, error: "Oturum gerekli." }, { status: 401 }),
+        errorResponse: { success: 0, error: "Oturum gerekli.", status: 401 },
       };
     }
 
@@ -69,12 +141,19 @@ async function authorizeUploadRequestForAction(action: "get" | "post" | "delete"
       });
       return {
         userId,
-        errorResponse: NextResponse.json({ success: 0, error: "Bu işlem için yetkiniz yok." }, { status: 403 }),
+        errorResponse: { success: 0, error: "Bu işlem için yetkiniz yok.", status: 403 },
       };
     }
   }
 
-  return { userId, errorResponse: null as NextResponse<unknown> | null };
+  return {
+    userId,
+    errorResponse: null as {
+      success: 0;
+      error: string;
+      status: number;
+    } | null,
+  };
 }
 
 async function enforceUploadRateLimit(request: Request, userId: string | null, namespace: string) {
@@ -168,12 +247,16 @@ function detectImageMime(buffer: Buffer): string | null {
 export async function handleUploadPost(request: Request) {
   const authResult = await authorizeUploadRequestForAction("post");
   if (authResult.errorResponse) {
-    return authResult.errorResponse;
+    return jsonWithCors(
+      request,
+      { success: authResult.errorResponse.success, error: authResult.errorResponse.error },
+      { status: authResult.errorResponse.status },
+    );
   }
 
   const rateLimitResponse = await enforceUploadRateLimit(request, authResult.userId, "upload");
   if (rateLimitResponse) {
-    return rateLimitResponse;
+    return withCors(request, rateLimitResponse);
   }
 
   const formData = await request.formData();
@@ -182,15 +265,15 @@ export async function handleUploadPost(request: Request) {
   const folder = sanitizeUploadFolder(typeof folderField === "string" ? folderField : undefined);
 
   if (!file || !(file instanceof File)) {
-    return NextResponse.json({ success: 0, error: "Dosya bulunamadı." }, { status: 400 });
+    return jsonWithCors(request, { success: 0, error: "Dosya bulunamadı." }, { status: 400 });
   }
 
   if (!ALLOWED_TYPES.has(file.type)) {
-    return NextResponse.json({ success: 0, error: "Desteklenmeyen dosya." }, { status: 400 });
+    return jsonWithCors(request, { success: 0, error: "Desteklenmeyen dosya." }, { status: 400 });
   }
 
   if (file.size > MAX_FILE_SIZE) {
-    return NextResponse.json({ success: 0, error: "Dosya boyutu çok büyük." }, { status: 400 });
+    return jsonWithCors(request, { success: 0, error: "Dosya boyutu çok büyük." }, { status: 400 });
   }
 
   try {
@@ -202,7 +285,8 @@ export async function handleUploadPost(request: Request) {
         severity: "warn",
         context: { claimedMime: file.type, detectedMime: detectedMime ?? "unknown", folder },
       });
-      return NextResponse.json(
+      return jsonWithCors(
+        request,
         { success: 0, error: "Dosya içeriği geçerli bir görsel değil." },
         { status: 400 },
       );
@@ -214,7 +298,8 @@ export async function handleUploadPost(request: Request) {
         severity: "warn",
         context: { claimedMime: file.type, detectedMime, folder },
       });
-      return NextResponse.json(
+      return jsonWithCors(
+        request,
         { success: 0, error: "MIME bilgisi dosya içeriğiyle uyuşmuyor." },
         { status: 400 },
       );
@@ -227,7 +312,8 @@ export async function handleUploadPost(request: Request) {
         severity: "warn",
         context: { signature: scanResult.signature, folder },
       });
-      return NextResponse.json(
+      return jsonWithCors(
+        request,
         { success: 0, error: `Dosya zararlı olarak işaretlendi (${scanResult.signature}).` },
         { status: 400 },
       );
@@ -239,7 +325,7 @@ export async function handleUploadPost(request: Request) {
       folder,
     });
 
-    return NextResponse.json({
+    return jsonWithCors(request, {
       success: 1,
       file: {
         url: uploaded.url,
@@ -254,7 +340,8 @@ export async function handleUploadPost(request: Request) {
       context: { message: error instanceof Error ? error.message : "unknown" },
     });
     console.error("Upload failed:", error);
-    return NextResponse.json(
+    return jsonWithCors(
+      request,
       { success: 0, error: "Yükleme sırasında bir hata oluştu." },
       { status: 500 },
     );
@@ -264,19 +351,23 @@ export async function handleUploadPost(request: Request) {
 export async function handleUploadDelete(request: Request) {
   const authResult = await authorizeUploadRequestForAction("delete");
   if (authResult.errorResponse) {
-    return authResult.errorResponse;
+    return jsonWithCors(
+      request,
+      { success: authResult.errorResponse.success, error: authResult.errorResponse.error },
+      { status: authResult.errorResponse.status },
+    );
   }
 
   const rateLimitResponse = await enforceUploadRateLimit(request, authResult.userId, "upload-delete");
   if (rateLimitResponse) {
-    return rateLimitResponse;
+    return withCors(request, rateLimitResponse);
   }
 
   let payload: unknown;
   try {
     payload = await request.json();
   } catch {
-    return NextResponse.json({ success: 0, error: "Geçersiz istek gövdesi." }, { status: 400 });
+    return jsonWithCors(request, { success: 0, error: "Geçersiz istek gövdesi." }, { status: 400 });
   }
 
   const payloadData = payload && typeof payload === "object"
@@ -286,13 +377,13 @@ export async function handleUploadDelete(request: Request) {
   const url = typeof payloadData.url === "string" ? payloadData.url : undefined;
 
   if (!key && !url) {
-    return NextResponse.json({ success: 0, error: "Silinecek görsel bulunamadı." }, { status: 400 });
+    return jsonWithCors(request, { success: 0, error: "Silinecek görsel bulunamadı." }, { status: 400 });
   }
 
   try {
     const deleted = await deleteImage({ key, url });
 
-    return NextResponse.json({
+    return jsonWithCors(request, {
       success: 1,
       file: {
         key: deleted.key,
@@ -308,7 +399,8 @@ export async function handleUploadDelete(request: Request) {
     console.error("Upload delete failed:", error);
     const message = error instanceof Error ? error.message : "Silme sırasında bir hata oluştu.";
     const status = message.includes("çözümlenemedi") ? 400 : 500;
-    return NextResponse.json(
+    return jsonWithCors(
+      request,
       { success: 0, error: status === 400 ? message : "Silme sırasında bir hata oluştu." },
       { status },
     );
@@ -318,7 +410,11 @@ export async function handleUploadDelete(request: Request) {
 export async function handleUploadGet(request: Request) {
   const authResult = await authorizeUploadRequestForAction("get");
   if (authResult.errorResponse) {
-    return authResult.errorResponse;
+    return jsonWithCors(
+      request,
+      { success: authResult.errorResponse.success, error: authResult.errorResponse.error },
+      { status: authResult.errorResponse.status },
+    );
   }
 
   const url = new URL(request.url);
@@ -328,7 +424,7 @@ export async function handleUploadGet(request: Request) {
 
   try {
     const files = await listImages({ folder, limit });
-    return NextResponse.json({
+    return jsonWithCors(request, {
       success: 1,
       files,
     });
@@ -339,9 +435,21 @@ export async function handleUploadGet(request: Request) {
       context: { message: error instanceof Error ? error.message : "unknown", folder, limit },
     });
     console.error("Upload list failed:", error);
-    return NextResponse.json(
+    return jsonWithCors(
+      request,
       { success: 0, error: "Dosyalar listelenirken bir hata oluştu." },
       { status: 500 },
     );
   }
+}
+
+export function handleUploadOptions(request: Request) {
+  const corsHeaders = resolveCorsHeaders(request);
+  if (!("Access-Control-Allow-Origin" in corsHeaders)) {
+    return new NextResponse(null, { status: 403 });
+  }
+  return new NextResponse(null, {
+    status: 204,
+    headers: corsHeaders,
+  });
 }

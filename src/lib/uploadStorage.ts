@@ -152,6 +152,13 @@ function parseOrigin(value?: string): string | null {
   }
 }
 
+function parseOriginsList(value?: string): string[] {
+  return (value ?? "")
+    .split(",")
+    .map((item) => parseOrigin(item.trim()))
+    .filter((item): item is string => Boolean(item));
+}
+
 function clampLimit(limit: number | undefined, fallback = 60, max = 200) {
   if (!Number.isFinite(limit)) {
     return fallback;
@@ -171,7 +178,11 @@ function resolveLocalKeyFromUrl(rawUrl: string): string {
 
   try {
     const parsed = new URL(trimmed);
-    const allowedOrigins = [parseOrigin(process.env.NEXTAUTH_URL), parseOrigin(process.env.NEXT_PUBLIC_SITE_URL)]
+    const allowedOrigins = [
+      parseOrigin(process.env.NEXTAUTH_URL),
+      parseOrigin(process.env.NEXT_PUBLIC_SITE_URL),
+      ...parseOriginsList(process.env.UPLOAD_CORS_ALLOWED_ORIGINS),
+    ]
       .filter((origin): origin is string => Boolean(origin));
 
     if (allowedOrigins.length > 0 && !allowedOrigins.includes(parsed.origin)) {
