@@ -52,6 +52,8 @@ export default async function HomePage() {
     id: string;
     imageUrl: string;
     postId: string | null;
+    titleColorLeft: string | null;
+    titleColorRight: string | null;
     post: { id: string; title: string; slug: string; excerpt: string | null; coverImageUrl: string | null } | null;
   };
   type HeroConfigRecord = {
@@ -122,6 +124,8 @@ export default async function HomePage() {
       id: slide.id,
       imageUrl: slide.imageUrl,
       postId: slide.postId,
+      titleColorLeft: slide.titleColorLeft,
+      titleColorRight: slide.titleColorRight,
       postTitle: slide.post?.title ?? null,
       postSlug: slide.post?.slug ?? null,
       postExcerpt: slide.post?.excerpt ?? null,
@@ -180,7 +184,7 @@ export default async function HomePage() {
               data-author-location="hero"
               aria-hidden="false"
             >
-              <AuthorCard author={author} />
+              <AuthorCard author={author} isEditable={isAdmin} />
             </div>
           )}
         </div>
@@ -211,7 +215,7 @@ export default async function HomePage() {
                   data-author-location="sidebar"
                   aria-hidden="true"
                 >
-                  <AuthorCard author={author} />
+                  <AuthorCard author={author} isEditable={isAdmin} />
                 </div>
               )}
               <div className={styles.sidebarStack}>

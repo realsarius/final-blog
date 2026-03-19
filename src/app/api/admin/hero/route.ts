@@ -8,6 +8,8 @@ export const runtime = "nodejs";
 type HeroSlidePayload = {
   imageUrl?: unknown;
   postId?: unknown;
+  titleColorLeft?: unknown;
+  titleColorRight?: unknown;
 };
 
 type HeroSettingsPayload = {
@@ -39,6 +41,21 @@ function normalizePostId(value: unknown) {
   }
   const trimmed = value.trim();
   return trimmed || null;
+}
+
+function normalizeHexColor(value: unknown) {
+  if (typeof value !== "string") {
+    return null;
+  }
+  const trimmed = value.trim().toLowerCase();
+  if (!trimmed) {
+    return null;
+  }
+  const hexRegex = /^#([0-9a-f]{6})$/;
+  if (!hexRegex.test(trimmed)) {
+    return null;
+  }
+  return trimmed;
 }
 
 function normalizeAutoplaySeconds(value: unknown) {
@@ -189,6 +206,8 @@ export async function PUT(request: Request) {
       return {
         imageUrl: normalizeImageUrl(typed.imageUrl),
         postId: normalizePostId(typed.postId),
+        titleColorLeft: normalizeHexColor(typed.titleColorLeft),
+        titleColorRight: normalizeHexColor(typed.titleColorRight),
       };
     })
     .filter((item) => item.imageUrl);
@@ -245,17 +264,18 @@ export async function PUT(request: Request) {
     const data = slides.slice(0, 10).map((item, index) => ({
       imageUrl: item.imageUrl,
       postId: item.postId,
+      titleColorLeft: item.titleColorLeft,
+      titleColorRight: item.titleColorRight,
       sortOrder: index,
       isActive: true,
     }));
 
     if (typeof txHeroSlide.createMany === "function") {
       await txHeroSlide.createMany({ data });
-      return;
-    }
-
-    for (const item of data) {
-      await txHeroSlide.create({ data: item });
+    } else {
+      for (const item of data) {
+        await txHeroSlide.create({ data: item });
+      }
     }
 
     if (txHeroConfig?.upsert) {
