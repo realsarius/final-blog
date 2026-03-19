@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import styles from "./layout.module.css";
 import SignOutButton from "@/components/admin/SignOutButton";
 import AdminToasts from "@/components/admin/AdminToasts";
@@ -67,7 +68,9 @@ export default function AdminLayout({
         </div>
       </aside>
       <div className={styles.mainArea}>
-        <AdminToasts />
+        <Suspense fallback={null}>
+          <AdminToasts />
+        </Suspense>
         <header className={styles.topbar}>
           <span>Yönetim Paneli</span>
           <SignOutButton className={styles.signOut} />
