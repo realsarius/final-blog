@@ -1,5 +1,11 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import {
+  getAdminEmail,
+  getDisplayUrl,
+  getGithubUrl,
+  getLinkedinUrl,
+} from "@/lib/seo";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
@@ -23,6 +29,10 @@ const FAQ_ITEMS = [
 ];
 
 export default function ContactPage() {
+  const adminEmail = getAdminEmail();
+  const linkedinUrl = getLinkedinUrl();
+  const githubUrl = getGithubUrl();
+
   return (
     <div className={styles.page}>
       <div className="container">
@@ -47,20 +57,24 @@ export default function ContactPage() {
             <div className={styles.contactList}>
               <p>
                 E-posta
-                <a href="mailto:hello@berkansozer.com">hello@berkansozer.com</a>
+                <a href={`mailto:${adminEmail}`}>{adminEmail}</a>
               </p>
-              <p>
-                LinkedIn
-                <a href="https://linkedin.com/in/berkansozer" target="_blank" rel="noreferrer">
-                  linkedin.com/in/berkansozer
-                </a>
-              </p>
-              <p>
-                GitHub
-                <a href="https://github.com/berkansozer" target="_blank" rel="noreferrer">
-                  github.com/berkansozer
-                </a>
-              </p>
+              {linkedinUrl ? (
+                <p>
+                  LinkedIn
+                  <a href={linkedinUrl} target="_blank" rel="noreferrer">
+                    {getDisplayUrl(linkedinUrl)}
+                  </a>
+                </p>
+              ) : null}
+              {githubUrl ? (
+                <p>
+                  GitHub
+                  <a href={githubUrl} target="_blank" rel="noreferrer">
+                    {getDisplayUrl(githubUrl)}
+                  </a>
+                </p>
+              ) : null}
             </div>
 
             <div className={styles.secondaryBox}>
@@ -79,7 +93,7 @@ export default function ContactPage() {
           <div className={styles.formWrap}>
             <form
               className={styles.form}
-              action="mailto:hello@berkansozer.com"
+              action={`mailto:${adminEmail}`}
               method="post"
               encType="text/plain"
             >

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { getAdminEmail } from "@/lib/seo";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
@@ -7,6 +8,8 @@ export const metadata: Metadata = {
 };
 
 export default function PrivacyPage() {
+  const adminEmail = getAdminEmail();
+
   return (
     <div className={styles.page}>
       <div className="container">
@@ -37,7 +40,7 @@ export default function PrivacyPage() {
         <section className={styles.section}>
           <h2>İletişim</h2>
           <p>
-            Herhangi bir sorunuz için hello@berkansozer.com adresinden
+            Herhangi bir sorunuz için {adminEmail} adresinden
             ulaşabilirsiniz.
           </p>
         </section>

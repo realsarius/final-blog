@@ -1,7 +1,23 @@
 import Link from "next/link";
+import {
+  getAdminEmail,
+  getAdminFullName,
+  getGithubUrl,
+  getLinkedinUrl,
+  getSiteDescription,
+  getSiteName,
+} from "@/lib/seo";
 import styles from "./SiteFooter.module.css";
 
 export default function SiteFooter() {
+  const currentYear = new Date().getFullYear();
+  const siteName = getSiteName();
+  const siteDescription = getSiteDescription();
+  const adminEmail = getAdminEmail();
+  const adminFullName = getAdminFullName();
+  const linkedinUrl = getLinkedinUrl();
+  const githubUrl = getGithubUrl();
+
   return (
     <footer className={styles.footer}>
       <div className={styles.frame}>
@@ -10,11 +26,10 @@ export default function SiteFooter() {
             <div className={styles.top}>
               <div className={styles.brandColumn}>
                 <Link className={styles.brand} href="/">
-                  Berkan&apos;ın Notları
+                  {siteName}
                 </Link>
                 <p className={styles.description}>
-                  Yazılım, üretkenlik ve dijital ürün geliştirme notlarını sade
-                  bir dille paylaşan kişisel yayın.
+                  {siteDescription}
                 </p>
               </div>
 
@@ -51,10 +66,20 @@ export default function SiteFooter() {
             </div>
 
             <div className={styles.bottom}>
-              <p>© 2026 Berkan Sozer. Tüm hakları saklıdır.</p>
+              <p>© {currentYear} {adminFullName}. Tüm hakları saklıdır.</p>
               <div className={styles.legalLinks}>
                 <Link href="/privacy">Gizlilik</Link>
-                <a href="mailto:hello@berkansozer.com">hello@berkansozer.com</a>
+                {linkedinUrl ? (
+                  <a href={linkedinUrl} target="_blank" rel="noreferrer">
+                    LinkedIn
+                  </a>
+                ) : null}
+                {githubUrl ? (
+                  <a href={githubUrl} target="_blank" rel="noreferrer">
+                    GitHub
+                  </a>
+                ) : null}
+                <a href={`mailto:${adminEmail}`}>{adminEmail}</a>
               </div>
             </div>
           </div>
