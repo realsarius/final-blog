@@ -1,5 +1,11 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import styles from "./page.module.css";
+
+export const metadata: Metadata = {
+  title: "İletişim",
+  description: "İçerik, iş birliği ve proje görüşmeleri için iletişim sayfası.",
+};
 
 const FAQ_ITEMS = [
   {

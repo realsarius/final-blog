@@ -1,4 +1,10 @@
+import type { Metadata } from "next";
 import styles from "./page.module.css";
+
+export const metadata: Metadata = {
+  title: "Gizlilik",
+  description: "Kişisel verilerin bu sitede nasıl ele alındığına dair özet bilgi.",
+};
 
 export default function PrivacyPage() {
   return (

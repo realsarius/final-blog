@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Space_Grotesk, Playfair_Display } from "next/font/google";
 import "./globals.css";
-import { getSiteUrl } from "@/lib/seo";
+import { getSiteDescription, getSiteName, getSiteUrl } from "@/lib/seo";
 import { Toaster } from "sonner";
 
 const spaceGrotesk = Space_Grotesk({
@@ -16,19 +16,35 @@ const playfairDisplay = Playfair_Display({
   style: ["normal", "italic"],
 });
 
+const siteName = getSiteName();
+const siteDescription = getSiteDescription();
+
 export const metadata: Metadata = {
-  title: "Kişisel Blog",
-  description: "Yazılar, notlar ve kişisel çalışmalar için sade bir blog.",
+  title: {
+    default: siteName,
+    template: `%s - ${siteName}`,
+  },
+  description: siteDescription,
   metadataBase: getSiteUrl(),
+  applicationName: siteName,
+  icons: {
+    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
+    shortcut: [{ url: "/icon.svg", type: "image/svg+xml" }],
+    apple: [{ url: "/icon.svg", type: "image/svg+xml" }],
+  },
+  alternates: {
+    canonical: "/",
+  },
   openGraph: {
-    title: "Kişisel Blog",
-    description: "Yazılar, notlar ve kişisel çalışmalar için sade bir blog.",
+    title: siteName,
+    description: siteDescription,
+    siteName,
     type: "website",
   },
   twitter: {
     card: "summary",
-    title: "Kişisel Blog",
-    description: "Yazılar, notlar ve kişisel çalışmalar için sade bir blog.",
+    title: siteName,
+    description: siteDescription,
   },
 };
 

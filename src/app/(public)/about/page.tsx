@@ -1,5 +1,11 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import styles from "./page.module.css";
+
+export const metadata: Metadata = {
+  title: "Hakkımda",
+  description: "Doğa yürüyüşü notları, rota deneyimleri ve blog yaklaşımım.",
+};
 
 const BLOG_FEATURES = [
   "Doğa yürüyüşü yazıları ve rota deneyimleri",
