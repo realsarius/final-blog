@@ -4,6 +4,71 @@
   border-radius: var(--radius-md);
   overflow: hidden;
   background: var(--surface);
+  perspective: 1400px;
+}
+
+.flipEnabled {
+  cursor: pointer;
+  border: 0;
+  border-radius: 0;
+  overflow: visible;
+  background: transparent;
+  perspective: 150rem;
+  -moz-perspective: 150rem;
+}
+
+.flipInner {
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.8s ease;
+  will-change: transform;
+  overflow: visible;
+  transform-origin: center center;
+}
+
+.face {
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
+.flipEnabled .face {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: none;
+  transition: box-shadow 260ms ease;
+}
+
+.flipEnabled:hover .face {
+  box-shadow: 0 14px 34px rgba(15, 18, 12, 0.18);
+}
+
+.front {
+  position: relative;
+  z-index: 1;
+}
+
+.flipEnabled .front {
+  background: var(--surface);
+}
+
+.back {
+  position: absolute;
+  inset: 0;
+  transform: rotateY(180deg);
+  background:
+    radial-gradient(circle at 22% 20%, rgba(178, 196, 152, 0.28), transparent 55%),
+    linear-gradient(150deg, #1a2017 0%, #242e21 100%);
+  color: rgba(246, 244, 236, 0.94);
+  display: grid;
+  align-content: center;
+  padding: 20px 18px;
+}
+
+.flipEnabled:hover .flipInner,
+.flipEnabled:focus-within .flipInner,
+.isFlipped .flipInner {
+  transform: rotateY(180deg);
 }
 
 .editButton {
@@ -31,14 +96,50 @@
   height: 17px;
 }
 
+.flipButton {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 4;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(250, 247, 242, 0.58);
+  border-radius: 999px;
+  background: rgba(20, 24, 18, 0.42);
+  color: rgba(250, 247, 242, 0.95);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 160ms ease, background 160ms ease;
+}
+
+.flipButton svg {
+  width: 16px;
+  height: 16px;
+}
+
 .card:hover .editButton,
 .card:focus-within .editButton {
   opacity: 1;
   pointer-events: auto;
 }
 
+.card:hover .flipButton,
+.card:focus-within .flipButton {
+  opacity: 1;
+  pointer-events: auto;
+}
+
 @media (hover: none) {
   .editButton {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .flipButton {
     opacity: 1;
     pointer-events: auto;
   }
@@ -149,4 +250,35 @@
   line-height: 1.65;
   color: var(--muted);
   margin-top: var(--space-1);
+}
+
+.backContent {
+  display: grid;
+  gap: 12px;
+}
+
+.backLabel {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(246, 244, 236, 0.66);
+}
+
+.backName {
+  font-family: var(--font-serif);
+  font-size: 24px;
+  line-height: 1.1;
+  letter-spacing: 0.01em;
+}
+
+.backBio {
+  font-size: 13px;
+  line-height: 1.62;
+  color: rgba(246, 244, 236, 0.88);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flipInner {
+    transition: none;
+  }
 }

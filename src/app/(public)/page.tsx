@@ -230,7 +230,7 @@ export default async function HomePage() {
                   data-author-location="sidebar"
                   aria-hidden="true"
                 >
-                  <AuthorCard author={author} isEditable={isAdmin} />
+                  <AuthorCard author={author} isEditable={isAdmin} enableFlip />
                 </div>
               )}
               <div className={styles.sidebarStack}>

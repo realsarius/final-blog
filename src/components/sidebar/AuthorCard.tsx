@@ -16,6 +16,7 @@ type AuthorPayload = {
 interface AuthorCardProps {
   author: AuthorPayload | null | undefined;
   isEditable?: boolean;
+  enableFlip?: boolean;
 }
 
 type UploadPostResponse = {
@@ -52,14 +53,16 @@ async function readJsonSafely<T>(response: Response): Promise<T | null> {
   }
 }
 
-export default function AuthorCard({ author, isEditable = false }: AuthorCardProps) {
+export default function AuthorCard({ author, isEditable = false, enableFlip = false }: AuthorCardProps) {
   const [avatarUrl, setAvatarUrl] = useState(author?.avatarUrl ?? "");
   const [avatarFocusX, setAvatarFocusX] = useState(clampFocus(author?.avatarFocusX));
   const [avatarFocusY, setAvatarFocusY] = useState(clampFocus(author?.avatarFocusY));
   const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [isFlipped, setIsFlipped] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const idPrefix = useId();
+  const canFlip = enableFlip && !isEditorOpen;
 
   useEffect(() => {
     setAvatarUrl(author?.avatarUrl ?? "");
@@ -84,6 +87,12 @@ export default function AuthorCard({ author, isEditable = false }: AuthorCardPro
     window.addEventListener("author-card-updated", onAuthorUpdated);
     return () => window.removeEventListener("author-card-updated", onAuthorUpdated);
   }, []);
+
+  useEffect(() => {
+    if (isEditorOpen) {
+      setIsFlipped(false);
+    }
+  }, [isEditorOpen]);
 
   if (!author) return null;
 
@@ -151,17 +160,41 @@ export default function AuthorCard({ author, isEditable = false }: AuthorCardPro
   }
 
   return (
-    <div className={styles.card}>
+    <div
+      className={[
+        styles.card,
+        canFlip ? styles.flipEnabled : "",
+        canFlip && isFlipped ? styles.isFlipped : "",
+      ].filter(Boolean).join(" ")}
+    >
       {isEditable ? (
         <button
           type="button"
           className={styles.editButton}
           aria-label="Yazar kartini duzenle"
-          onClick={() => setIsEditorOpen((open) => !open)}
+          onClick={() => {
+            setIsFlipped(false);
+            setIsEditorOpen((open) => !open);
+          }}
         >
           <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <path d="M4 20h4l10.5-10.5a1.414 1.414 0 0 0 0-2L16.5 5.5a1.414 1.414 0 0 0-2 0L4 16v4z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
             <path d="m13.5 8.5 2 2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+      ) : null}
+
+      {enableFlip ? (
+        <button
+          type="button"
+          className={styles.flipButton}
+          aria-label={isFlipped ? "Yazar kartini on yuze cevir" : "Yazar kartini arka yuze cevir"}
+          aria-pressed={isFlipped}
+          onClick={() => setIsFlipped((current) => !current)}
+        >
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M7 7h10v10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="m17 7-3 3m-7 7h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </button>
       ) : null}
@@ -217,26 +250,44 @@ export default function AuthorCard({ author, isEditable = false }: AuthorCardPro
         </div>
       ) : null}
 
-      <div className={styles.avatarWrap}>
-        {avatarUrl ? (
-          <Image
-            src={avatarUrl}
-            alt={`${author.firstName} ${author.lastName}`}
-            fill
-            sizes="(max-width: 900px) 100vw, 300px"
-            className={styles.avatar}
-            style={{ objectPosition: `${avatarFocusX}% ${avatarFocusY}%` }}
-          />
-        ) : (
-          <div className={styles.avatarPlaceholder} />
-        )}
-      </div>
-      <div className={styles.info}>
-        <p className={styles.label}>Yazar</p>
-        <h3 className={styles.name}>
-          {author.firstName} {author.lastName}
-        </h3>
-        {author.bio && <p className={styles.bio}>{author.bio}</p>}
+      <div className={styles.flipInner}>
+        <div className={`${styles.face} ${styles.front}`}>
+          <div className={styles.avatarWrap}>
+            {avatarUrl ? (
+              <Image
+                src={avatarUrl}
+                alt={`${author.firstName} ${author.lastName}`}
+                fill
+                sizes="(max-width: 900px) 100vw, 300px"
+                className={styles.avatar}
+                style={{ objectPosition: `${avatarFocusX}% ${avatarFocusY}%` }}
+              />
+            ) : (
+              <div className={styles.avatarPlaceholder} />
+            )}
+          </div>
+          <div className={styles.info}>
+            <p className={styles.label}>Yazar</p>
+            <h3 className={styles.name}>
+              {author.firstName} {author.lastName}
+            </h3>
+            {author.bio && <p className={styles.bio}>{author.bio}</p>}
+          </div>
+        </div>
+
+        <div className={`${styles.face} ${styles.back}`}>
+          <div className={styles.backContent}>
+            <p className={styles.backLabel}>Kisa Biyografi</p>
+            <h3 className={styles.backName}>
+              {author.firstName} {author.lastName}
+            </h3>
+            <p className={styles.backBio}>
+              {author.bio?.trim()
+                ? author.bio
+                : "Yazar bilgisi yakinda bu alanda guncellenecek."}
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );

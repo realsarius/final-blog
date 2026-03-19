@@ -645,6 +645,7 @@
 
 :global(html.is-scrolled) .sidebarAuthor {
   max-height: 520px;
+  overflow: visible;
   transform: translateY(0);
   opacity: 1;
   pointer-events: auto;
@@ -659,6 +660,7 @@
   --hero-section-height: 300px;
   padding-bottom: var(--space-3);
   --hero-title-size: clamp(48px, 9vw, 120px);
+  overflow: hidden;
 }
 
 :global(html.is-scrolled) .heroInner {
@@ -667,6 +669,10 @@
 
 :global(html.is-scrolled) .heroText {
   padding-bottom: var(--space-3);
+}
+
+:global(html.is-scrolled) .heroGhost {
+  opacity: 0;
 }
 
 
@@ -733,6 +739,7 @@
 
   .sidebarAuthor {
     max-height: 520px;
+    overflow: visible;
     opacity: 1;
     transform: translateY(0);
     pointer-events: auto;
