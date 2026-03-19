@@ -135,7 +135,7 @@ export async function GET() {
     },
   });
 
-  let settings = {
+  let settings: { autoplaySeconds: number; transitionDirection: "left" | "right" } = {
     autoplaySeconds: DEFAULT_AUTOPLAY_SECONDS,
     transitionDirection: "left" as const,
   };

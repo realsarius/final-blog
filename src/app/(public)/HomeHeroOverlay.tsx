@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import NextImage from "next/image";
 import styles from "./page.module.css";
 
 type HeroSlide = {
@@ -610,7 +610,7 @@ export default function HomeHeroOverlay({ initialSlides, initialSettings, availa
         activeSlide.postSlug ? (
           <div className={styles.heroActivePost} aria-live="polite">
             <Link href={`/blog/${activeSlide.postSlug}`} className={styles.heroActiveCard}>
-              <Image
+              <NextImage
                 src={activeSlide.postCoverImageUrl ?? GENERIC_COVER_URL}
                 alt={activeSlide.postTitle ?? "One cikan yazi"}
                 width={68}
@@ -731,7 +731,7 @@ export default function HomeHeroOverlay({ initialSlides, initialSettings, availa
                   {slides.length === 0 ? <p>Henuz slayt eklenmedi.</p> : null}
                   {slides.map((slide, index) => (
                     <div key={`${slide.imageUrl}-${slide.postId ?? "none"}-${index}`} className={styles.heroSlideRow}>
-                      <Image
+                      <NextImage
                         src={slide.imageUrl}
                         alt="Hero slide"
                         width={72}
@@ -871,7 +871,7 @@ export default function HomeHeroOverlay({ initialSlides, initialSettings, availa
                         onClick={() => setSelectedImageUrl(image.url)}
                         title={image.key}
                       >
-                        <Image
+                        <NextImage
                           src={image.url}
                           alt={image.key}
                           fill

@@ -28,7 +28,7 @@ export default function MarkdownField({
     if (!value.trim()) {
       return "";
     }
-    const raw = marked.parse(value);
+    const raw = marked.parse(value) as string;
     return DOMPurify.sanitize(raw);
   }, [value]);
 

@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import type { Metadata } from "next";
 import styles from "./page.module.css";
 import CategoryNav from "@/components/layout/CategoryNav";
 import AuthorCard from "@/components/sidebar/AuthorCard";
@@ -15,11 +16,14 @@ import HomeHeroOverlay from "./HomeHeroOverlay";
 
 type HeroTransitionDirection = "left" | "right";
 
-export default async function HomePage() {
-  const session = await getServerSession(authOptions);
-  const isAdmin = session?.user?.role === "ADMIN";
+export const metadata: Metadata = {
+  title: "Ana Sayfa",
+  description: "Doğadan ilham alan hikayeler, notlar ve son yayınlanan yazılar.",
+};
 
-  const posts = await prisma.post.findMany({
+export default async function HomePage() {
+  const sessionPromise = getServerSession(authOptions);
+  const postsPromise = prisma.post.findMany({
     where: { status: "PUBLISHED" },
     orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
     take: 6,
@@ -28,11 +32,7 @@ export default async function HomePage() {
       categories: { include: { category: true } },
     },
   });
-
-  const latestPosts = posts.slice(0, 6);
-  const popularPosts = posts.slice(0, 4);
-  const author = posts[0]?.author ?? null;
-  const availablePosts = await prisma.post.findMany({
+  const availablePostsPromise = prisma.post.findMany({
     where: {
       status: "PUBLISHED",
     },
@@ -47,6 +47,17 @@ export default async function HomePage() {
       featured: true,
     },
   });
+
+  const [session, posts, availablePosts] = await Promise.all([
+    sessionPromise,
+    postsPromise,
+    availablePostsPromise,
+  ]);
+  const isAdmin = session?.user?.role === "ADMIN";
+
+  const latestPosts = posts.slice(0, 6);
+  const popularPosts = posts.slice(0, 4);
+  const author = posts[0]?.author ?? null;
 
   type HeroSlideRecord = {
     id: string;
@@ -67,9 +78,14 @@ export default async function HomePage() {
       findMany: (args: unknown) => Promise<HeroSlideRecord[]>;
     };
   }).heroSlide;
-  if (heroSlideModel?.findMany) {
-    try {
-      persistedHeroSlides = await heroSlideModel.findMany({
+  const heroConfigModel = (prisma as unknown as {
+    heroConfig?: {
+      findUnique: (args: unknown) => Promise<HeroConfigRecord | null>;
+    };
+  }).heroConfig;
+  const [heroSlidesResult, heroConfigResult] = await Promise.all([
+    heroSlideModel?.findMany
+      ? heroSlideModel.findMany({
         where: { isActive: true },
         orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
         include: {
@@ -84,29 +100,23 @@ export default async function HomePage() {
           },
         },
         take: 10,
-      });
-    } catch {
-      persistedHeroSlides = [];
-    }
-  }
-  const heroConfigModel = (prisma as unknown as {
-    heroConfig?: {
-      findUnique: (args: unknown) => Promise<HeroConfigRecord | null>;
-    };
-  }).heroConfig;
-  if (heroConfigModel?.findUnique) {
-    try {
-      persistedHeroConfig = await heroConfigModel.findUnique({
+      }).catch(() => [])
+      : Promise.resolve<HeroSlideRecord[]>([]),
+    heroConfigModel?.findUnique
+      ? heroConfigModel.findUnique({
         where: { id: "default" },
         select: {
           autoplaySeconds: true,
           transitionDirection: true,
         },
-      });
-    } catch {
-      persistedHeroConfig = null;
-    }
+      }).catch(() => null)
+      : Promise.resolve<HeroConfigRecord | null>(null),
+  ]);
+
+  if (heroSlidesResult.length > 0) {
+    persistedHeroSlides = heroSlidesResult;
   }
+  persistedHeroConfig = heroConfigResult;
 
   const fallbackSlides = availablePosts
     .filter((post) => post.featured && post.coverImageUrl)

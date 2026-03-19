@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import type EditorJS from "@editorjs/editorjs";
-import type { OutputData } from "@editorjs/editorjs";
+import type { BlockToolConstructable, OutputData } from "@editorjs/editorjs";
 import EditorRenderer from "@/components/EditorRenderer";
 import { parseEditorContent } from "@/lib/content";
 import styles from "./post-form.module.css";
@@ -1079,13 +1079,19 @@ export default function EditorField({
         return;
       }
 
+      const headerTool = Header as unknown as BlockToolConstructable;
+      const listTool = List as unknown as BlockToolConstructable;
+      const quoteTool = Quote as unknown as BlockToolConstructable;
+      const codeTool = Code as unknown as BlockToolConstructable;
+      const imageTool = ImageTool as unknown as BlockToolConstructable;
+
       const editor = new EditorJS({
         holder: holderRef.current,
         data: initialData,
         autofocus: true,
         tools: {
           header: {
-            class: Header,
+            class: headerTool,
             inlineToolbar: true,
             config: {
               levels: [1, 2, 3, 4, 5, 6],
@@ -1093,11 +1099,11 @@ export default function EditorField({
             },
           },
           list: {
-            class: List,
+            class: listTool,
             inlineToolbar: true,
           },
           quote: {
-            class: Quote,
+            class: quoteTool,
             inlineToolbar: true,
             config: {
               quotePlaceholder: "Alıntıyı yazın",
@@ -1105,13 +1111,13 @@ export default function EditorField({
             },
           },
           code: {
-            class: Code,
+            class: codeTool,
             config: {
               placeholder: "Kodunuzu buraya yazın",
             },
           },
           image: {
-            class: ImageTool,
+            class: imageTool,
             config: {
               uploader: {
                 async uploadByFile(file: File) {
