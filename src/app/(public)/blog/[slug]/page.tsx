@@ -62,7 +62,7 @@ export default async function BlogDetailPage({ params }: PageProps) {
   }
 
   const categories = post.categories.map((item) => item.category.name).join(", ");
-  const tags = post.tags.map((item) => item.tag.name).join(", ");
+  const tags = post.tags.map((item) => item.tag);
   const readingTime = formatReadingTime(post.content);
 
   return (
@@ -90,10 +90,16 @@ export default async function BlogDetailPage({ params }: PageProps) {
           <EditorRenderer content={post.content} locale={locale} />
         </section>
 
-        {tags ? (
+        {tags.length > 0 ? (
           <footer className={styles.footer}>
             <span>{t.tags}</span>
-            <span>{tags}</span>
+            <div className={styles.tagList}>
+              {tags.map((tag) => (
+                <Link key={tag.id} href={`/blog?tag=${encodeURIComponent(tag.slug)}`} className={styles.tagLink}>
+                  {tag.name}
+                </Link>
+              ))}
+            </div>
           </footer>
         ) : null}
       </div>

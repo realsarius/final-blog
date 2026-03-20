@@ -44,6 +44,26 @@
   background: color-mix(in srgb, var(--line) 18%, var(--surface) 82%);
 }
 
+.activeTagFilter {
+  margin-bottom: var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.clearTagLink {
+  color: var(--accent-dark);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .empty {
   padding: var(--space-6);
   border: 1px dashed var(--line);
@@ -99,6 +119,12 @@
 .tags {
   color: var(--muted);
   font-size: 13px;
+}
+
+.tagLink {
+  color: var(--text);
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .link {

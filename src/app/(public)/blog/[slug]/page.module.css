@@ -83,8 +83,28 @@
   margin-top: var(--space-6);
   padding-top: var(--space-4);
   border-top: 1px solid var(--line);
-  display: flex;
+  display: grid;
   gap: var(--space-3);
   color: var(--muted);
   font-size: 13px;
+}
+
+.tagList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tagLink {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 4px 10px;
+  color: var(--text);
+  background: var(--surface);
+  text-decoration: none;
+  transition: border-color 150ms, color 150ms;
+}
+
+.tagLink:hover {
+  border-color: var(--text);
 }
