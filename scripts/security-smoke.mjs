@@ -4,6 +4,16 @@ const adminPassword = process.env.SECURITY_TEST_ADMIN_PASSWORD ?? "";
 const enableDbMutationChecks = ["1", "true", "yes", "on"].includes(
   (process.env.SECURITY_TEST_DB_MUTATION ?? "").trim().toLowerCase(),
 );
+const defaultUploadLimitBytes = 6 * 1024 * 1024;
+
+function resolveUploadLimitBytes() {
+  const parsedMb = Number(process.env.UPLOAD_MAX_FILE_SIZE_MB ?? "6");
+  if (!Number.isFinite(parsedMb) || parsedMb <= 0) {
+    return defaultUploadLimitBytes;
+  }
+  const clampedMb = Math.min(40, Math.max(1, parsedMb));
+  return Math.floor(clampedMb * 1024 * 1024);
+}
 
 function assert(condition, message) {
   if (!condition) {
@@ -110,7 +120,7 @@ async function checkUploadValidationAsAdmin(cookieHeader) {
   });
   assert(invalidResponse.status === 400, "invalid image payload should be rejected");
 
-  const oversizeBuffer = Buffer.alloc(7 * 1024 * 1024, 0);
+  const oversizeBuffer = Buffer.alloc(resolveUploadLimitBytes() + 1, 0);
   const oversizeFile = new File([oversizeBuffer], "oversize.jpg", { type: "image/jpeg" });
   const oversizeForm = new FormData();
   oversizeForm.set("file", oversizeFile);
