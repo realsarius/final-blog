@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as
 import type EditorJS from "@editorjs/editorjs";
 import type { BlockToolConstructable, OutputData } from "@editorjs/editorjs";
 import EditorRenderer from "@/components/EditorRenderer";
+import { optimizeImageForUpload } from "@/lib/client/optimizeImageUpload";
 import { parseEditorContent } from "@/lib/content";
 import { interpolate } from "@/lib/interpolate";
 import styles from "./post-form.module.css";
@@ -167,6 +168,7 @@ type SelectionToolbarState = {
   blockId: string;
   blockTool: string;
   headerLevel?: number;
+  listStyle?: EditorListStyle;
   previewText?: string;
   style: BlockStylePatch;
 };
@@ -1593,7 +1595,7 @@ export default function EditorField({
     const blockRect = blockEl.getBoundingClientRect();
     const fieldRect = fieldRef.current.getBoundingClientRect();
     const isCollapsed = selection.isCollapsed;
-    const shouldShowCollapsedToolbar = isCollapsed && (tool === "header" || tool === "paragraph");
+    const shouldShowCollapsedToolbar = isCollapsed && (tool === "header" || tool === "paragraph" || tool === "list");
 
     if (isCollapsed && !shouldShowCollapsedToolbar) {
       setSelectionToolbar(null);
@@ -1609,6 +1611,7 @@ export default function EditorField({
       blockId,
       blockTool: tool,
       headerLevel: tool === "header" ? normalizeHeaderLevel(data.level) : undefined,
+      listStyle: tool === "list" && data.style === "ordered" ? "ordered" : "unordered",
       previewText: typeof data.text === "string" ? data.text : "",
       style: mergedStyle,
     });
@@ -2391,6 +2394,51 @@ export default function EditorField({
     }
   }, [getEditor, selectionToolbar, syncActiveBlock, syncSerializedFromEditor]);
 
+  const applySelectionListStyle = useCallback(async (style: "unordered" | "ordered" | "numbered") => {
+    if (!selectionToolbar || selectionToolbar.blockTool !== "list") {
+      return;
+    }
+
+    const editor = getEditor();
+    if (!editor?.blocks?.update) {
+      return;
+    }
+
+    const nextStyle: EditorListStyle = style === "unordered" ? "unordered" : "ordered";
+
+    let rawData: Record<string, unknown> = {};
+    const block = editor.blocks.getBlockByIndex?.(selectionToolbar.blockIndex);
+    if (block) {
+      try {
+        const saved = await block.save();
+        if (saved && typeof saved === "object" && "data" in saved && saved.data) {
+          rawData = saved.data as Record<string, unknown>;
+        }
+      } catch {
+        // Ignore save failures and keep empty data.
+      }
+    }
+
+    try {
+      await editor.blocks.update(selectionToolbar.blockId, {
+        ...rawData,
+        style: nextStyle,
+      });
+      await syncSerializedFromEditor(editor as EditorRuntimeApi);
+      setSelectionToolbar((prev) => (
+        prev
+          ? {
+            ...prev,
+            listStyle: nextStyle,
+          }
+          : prev
+      ));
+      setSelectionTransformOpen(false);
+    } catch {
+      // Ignore update failures.
+    }
+  }, [getEditor, selectionToolbar, syncSerializedFromEditor]);
+
   const applySelectionInlineAction = useCallback((action: InlineAction) => {
     const selection = window.getSelection();
     if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
@@ -2585,6 +2633,9 @@ export default function EditorField({
   const handleDragHandlePointerDown = useCallback((event: ReactPointerEvent<HTMLButtonElement>) => {
     event.preventDefault();
     event.stopPropagation();
+    setSelectionTransformOpen(false);
+    setSelectionInlineMoreOpen(false);
+    setSelectionToolbar(null);
     const startIndex = activeBlockIndex ?? getCurrentBlockIndex();
     dragStateRef.current = {
       startX: event.clientX,
@@ -2671,8 +2722,9 @@ export default function EditorField({
             config: {
               uploader: {
                 async uploadByFile(file: File) {
+                  const optimizedFile = await optimizeImageForUpload(file);
                   const formData = new FormData();
-                  formData.append("file", file);
+                  formData.append("file", optimizedFile);
                   formData.append("folder", "content");
                   const response = await fetch("/api/v1/uploads", {
                     method: "POST",
@@ -2933,6 +2985,10 @@ export default function EditorField({
         return;
       }
 
+      if (tool === "list") {
+        return;
+      }
+
       openBlockMenuForIndex(blockIndex);
     };
 
@@ -3021,7 +3077,7 @@ export default function EditorField({
   }, [activeTab]);
 
   useEffect(() => {
-    if (!selectionToolbar || selectionToolbar.blockTool !== "header") {
+    if (!selectionToolbar || (selectionToolbar.blockTool !== "header" && selectionToolbar.blockTool !== "list")) {
       setSelectionTransformOpen(false);
       setSelectionTransformPosition(null);
     }
@@ -3172,8 +3228,8 @@ export default function EditorField({
             className={styles.editorFloatingTools}
             style={{
               top: floatingTop ?? 0,
-              opacity: floatingVisible && !selectionToolbar ? 1 : 0,
-              pointerEvents: floatingVisible && !selectionToolbar ? "auto" : "none",
+              opacity: floatingVisible ? 1 : 0,
+              pointerEvents: floatingVisible ? "auto" : "none",
             }}
           >
             <button
@@ -3214,7 +3270,7 @@ export default function EditorField({
                 left: selectionToolbarLeft ?? Math.max(48, selectionToolbar.left),
               }}
             >
-              {selectionToolbar.blockTool === "header" ? (
+              {selectionToolbar.blockTool === "header" || selectionToolbar.blockTool === "list" ? (
                 <div className={styles.editorSelectionTransform} ref={selectionTransformRef}>
                   <button
                     ref={selectionTransformTriggerRef}
@@ -3222,9 +3278,11 @@ export default function EditorField({
                     className={styles.editorSelectionTransformTrigger}
                     onMouseDown={(event) => event.preventDefault()}
                     onClick={() => setSelectionTransformOpen((prev) => !prev)}
-                    title="Transform to"
+                    title={selectionToolbar.blockTool === "list" ? "List style" : "Transform to"}
                   >
-                    H{selectionToolbar.headerLevel ?? 2}
+                    {selectionToolbar.blockTool === "list"
+                      ? (selectionToolbar.listStyle === "ordered" ? "List 1." : "List •")
+                      : `H${selectionToolbar.headerLevel ?? 2}`}
                   </button>
                   {selectionTransformOpen ? (
                     <div
@@ -3236,136 +3294,178 @@ export default function EditorField({
                         maxHeight: selectionTransformPosition?.maxHeight ?? 420,
                       }}
                     >
-                      <div className={styles.editorSelectionTransformTitle}>TRANSFORM TO</div>
-                      <button
-                        type="button"
-                        className={styles.editorSelectionTransformItem}
-                        onMouseDown={(event) => event.preventDefault()}
-                        onClick={() => {
-                          void applySelectionTransform("header", 1);
-                        }}
-                      >
-                        <span>H1 Heading 1</span>
-                        <strong className={styles.editorSelectionTransformPreview}>
-                          {selectionToolbar.previewText?.trim() || "Preview"}
-                        </strong>
-                      </button>
-                      <button
-                        type="button"
-                        className={styles.editorSelectionTransformItem}
-                        onMouseDown={(event) => event.preventDefault()}
-                        onClick={() => {
-                          void applySelectionTransform("header", 2);
-                        }}
-                      >
-                        <span>H2 Heading 2</span>
-                        <strong className={styles.editorSelectionTransformPreview}>
-                          {selectionToolbar.previewText?.trim() || "Preview"}
-                        </strong>
-                      </button>
-                      <button
-                        type="button"
-                        className={styles.editorSelectionTransformItem}
-                        onMouseDown={(event) => event.preventDefault()}
-                        onClick={() => {
-                          void applySelectionTransform("header", 3);
-                        }}
-                      >
-                        <span>H3 Heading 3</span>
-                        <strong className={styles.editorSelectionTransformPreview}>
-                          {selectionToolbar.previewText?.trim() || "Preview"}
-                        </strong>
-                      </button>
-                      <button
-                        type="button"
-                        className={styles.editorSelectionTransformItem}
-                        onMouseDown={(event) => event.preventDefault()}
-                        onClick={() => {
-                          void applySelectionTransform("header", 4);
-                        }}
-                      >
-                        <span>H4 Heading 4</span>
-                        <strong className={styles.editorSelectionTransformPreview}>
-                          {selectionToolbar.previewText?.trim() || "Preview"}
-                        </strong>
-                      </button>
-                      <button
-                        type="button"
-                        className={styles.editorSelectionTransformItem}
-                        onMouseDown={(event) => event.preventDefault()}
-                        onClick={() => {
-                          void applySelectionTransform("header", 5);
-                        }}
-                      >
-                        <span>H5 Heading 5</span>
-                        <strong className={styles.editorSelectionTransformPreview}>
-                          {selectionToolbar.previewText?.trim() || "Preview"}
-                        </strong>
-                      </button>
-                      <button
-                        type="button"
-                        className={styles.editorSelectionTransformItem}
-                        onMouseDown={(event) => event.preventDefault()}
-                        onClick={() => {
-                          void applySelectionTransform("header", 6);
-                        }}
-                      >
-                        <span>H6 Heading 6</span>
-                        <strong className={styles.editorSelectionTransformPreview}>
-                          {selectionToolbar.previewText?.trim() || "Preview"}
-                        </strong>
-                      </button>
-                      <button
-                        type="button"
-                        className={styles.editorSelectionTransformItem}
-                        onMouseDown={(event) => event.preventDefault()}
-                        onClick={() => {
-                          void applySelectionTransform("paragraph");
-                        }}
-                      >
-                        <span>Paragraph</span>
-                        <span className={styles.editorSelectionTransformPreviewSub}>text</span>
-                      </button>
-                      <button
-                        type="button"
-                        className={styles.editorSelectionTransformItem}
-                        onMouseDown={(event) => event.preventDefault()}
-                        onClick={() => {
-                          void applySelectionTransform("list");
-                        }}
-                      >
-                        <span>List</span>
-                        <span className={styles.editorSelectionTransformPreviewSub}>• item</span>
-                      </button>
-                      <button
-                        type="button"
-                        className={styles.editorSelectionTransformItem}
-                        onMouseDown={(event) => event.preventDefault()}
-                        onClick={() => {
-                          void applySelectionTransform("quote");
-                        }}
-                      >
-                        <span>Quote</span>
-                        <span className={styles.editorSelectionTransformPreviewSub}>&quot;text&quot;</span>
-                      </button>
-                      <button
-                        type="button"
-                        className={`${styles.editorSelectionTransformItem} ${styles.editorSelectionTransformItemDisabled}`}
-                        onMouseDown={(event) => event.preventDefault()}
-                        disabled
-                      >
-                        <span>Columns</span>
-                        <span className={styles.editorSelectionTransformPreviewSub}>2 col</span>
-                      </button>
-                      <button
-                        type="button"
-                        className={`${styles.editorSelectionTransformItem} ${styles.editorSelectionTransformItemDisabled}`}
-                        onMouseDown={(event) => event.preventDefault()}
-                        disabled
-                      >
-                        <span>Grid</span>
-                        <span className={styles.editorSelectionTransformPreviewSub}>grid</span>
-                      </button>
+                      <div className={styles.editorSelectionTransformTitle}>
+                        {selectionToolbar.blockTool === "list" ? "LIST STYLE" : "TRANSFORM TO"}
+                      </div>
+                      {selectionToolbar.blockTool === "list" ? (
+                        <>
+                          <button
+                            type="button"
+                            className={styles.editorSelectionTransformItem}
+                            onMouseDown={(event) => event.preventDefault()}
+                            onClick={() => {
+                              void applySelectionListStyle("unordered");
+                            }}
+                          >
+                            <span>Unordered list</span>
+                            <span className={styles.editorSelectionTransformPreviewSub}>• item</span>
+                          </button>
+                          <button
+                            type="button"
+                            className={styles.editorSelectionTransformItem}
+                            onMouseDown={(event) => event.preventDefault()}
+                            onClick={() => {
+                              void applySelectionListStyle("ordered");
+                            }}
+                          >
+                            <span>Ordered list</span>
+                            <span className={styles.editorSelectionTransformPreviewSub}>1. item</span>
+                          </button>
+                          <button
+                            type="button"
+                            className={styles.editorSelectionTransformItem}
+                            onMouseDown={(event) => event.preventDefault()}
+                            onClick={() => {
+                              void applySelectionListStyle("numbered");
+                            }}
+                          >
+                            <span>Numbered list</span>
+                            <span className={styles.editorSelectionTransformPreviewSub}>1) item</span>
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            className={styles.editorSelectionTransformItem}
+                            onMouseDown={(event) => event.preventDefault()}
+                            onClick={() => {
+                              void applySelectionTransform("header", 1);
+                            }}
+                          >
+                            <span>H1 Heading 1</span>
+                            <strong className={styles.editorSelectionTransformPreview}>
+                              {selectionToolbar.previewText?.trim() || "Preview"}
+                            </strong>
+                          </button>
+                          <button
+                            type="button"
+                            className={styles.editorSelectionTransformItem}
+                            onMouseDown={(event) => event.preventDefault()}
+                            onClick={() => {
+                              void applySelectionTransform("header", 2);
+                            }}
+                          >
+                            <span>H2 Heading 2</span>
+                            <strong className={styles.editorSelectionTransformPreview}>
+                              {selectionToolbar.previewText?.trim() || "Preview"}
+                            </strong>
+                          </button>
+                          <button
+                            type="button"
+                            className={styles.editorSelectionTransformItem}
+                            onMouseDown={(event) => event.preventDefault()}
+                            onClick={() => {
+                              void applySelectionTransform("header", 3);
+                            }}
+                          >
+                            <span>H3 Heading 3</span>
+                            <strong className={styles.editorSelectionTransformPreview}>
+                              {selectionToolbar.previewText?.trim() || "Preview"}
+                            </strong>
+                          </button>
+                          <button
+                            type="button"
+                            className={styles.editorSelectionTransformItem}
+                            onMouseDown={(event) => event.preventDefault()}
+                            onClick={() => {
+                              void applySelectionTransform("header", 4);
+                            }}
+                          >
+                            <span>H4 Heading 4</span>
+                            <strong className={styles.editorSelectionTransformPreview}>
+                              {selectionToolbar.previewText?.trim() || "Preview"}
+                            </strong>
+                          </button>
+                          <button
+                            type="button"
+                            className={styles.editorSelectionTransformItem}
+                            onMouseDown={(event) => event.preventDefault()}
+                            onClick={() => {
+                              void applySelectionTransform("header", 5);
+                            }}
+                          >
+                            <span>H5 Heading 5</span>
+                            <strong className={styles.editorSelectionTransformPreview}>
+                              {selectionToolbar.previewText?.trim() || "Preview"}
+                            </strong>
+                          </button>
+                          <button
+                            type="button"
+                            className={styles.editorSelectionTransformItem}
+                            onMouseDown={(event) => event.preventDefault()}
+                            onClick={() => {
+                              void applySelectionTransform("header", 6);
+                            }}
+                          >
+                            <span>H6 Heading 6</span>
+                            <strong className={styles.editorSelectionTransformPreview}>
+                              {selectionToolbar.previewText?.trim() || "Preview"}
+                            </strong>
+                          </button>
+                          <button
+                            type="button"
+                            className={styles.editorSelectionTransformItem}
+                            onMouseDown={(event) => event.preventDefault()}
+                            onClick={() => {
+                              void applySelectionTransform("paragraph");
+                            }}
+                          >
+                            <span>Paragraph</span>
+                            <span className={styles.editorSelectionTransformPreviewSub}>text</span>
+                          </button>
+                          <button
+                            type="button"
+                            className={styles.editorSelectionTransformItem}
+                            onMouseDown={(event) => event.preventDefault()}
+                            onClick={() => {
+                              void applySelectionTransform("list");
+                            }}
+                          >
+                            <span>List</span>
+                            <span className={styles.editorSelectionTransformPreviewSub}>• item</span>
+                          </button>
+                          <button
+                            type="button"
+                            className={styles.editorSelectionTransformItem}
+                            onMouseDown={(event) => event.preventDefault()}
+                            onClick={() => {
+                              void applySelectionTransform("quote");
+                            }}
+                          >
+                            <span>Quote</span>
+                            <span className={styles.editorSelectionTransformPreviewSub}>&quot;text&quot;</span>
+                          </button>
+                          <button
+                            type="button"
+                            className={`${styles.editorSelectionTransformItem} ${styles.editorSelectionTransformItemDisabled}`}
+                            onMouseDown={(event) => event.preventDefault()}
+                            disabled
+                          >
+                            <span>Columns</span>
+                            <span className={styles.editorSelectionTransformPreviewSub}>2 col</span>
+                          </button>
+                          <button
+                            type="button"
+                            className={`${styles.editorSelectionTransformItem} ${styles.editorSelectionTransformItemDisabled}`}
+                            onMouseDown={(event) => event.preventDefault()}
+                            disabled
+                          >
+                            <span>Grid</span>
+                            <span className={styles.editorSelectionTransformPreviewSub}>grid</span>
+                          </button>
+                        </>
+                      )}
                     </div>
                   ) : null}
                 </div>
@@ -3409,6 +3509,72 @@ export default function EditorField({
                 </button>
                 {selectionInlineMoreOpen ? (
                   <div className={styles.editorSelectionMoreMenu}>
+                    <button
+                      type="button"
+                      className={styles.editorSelectionMoreItem}
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => {
+                        void applySelectionTransform("header", 1);
+                        setSelectionInlineMoreOpen(false);
+                      }}
+                    >
+                      H1 Heading 1
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.editorSelectionMoreItem}
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => {
+                        void applySelectionTransform("header", 2);
+                        setSelectionInlineMoreOpen(false);
+                      }}
+                    >
+                      H2 Heading 2
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.editorSelectionMoreItem}
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => {
+                        void applySelectionTransform("header", 3);
+                        setSelectionInlineMoreOpen(false);
+                      }}
+                    >
+                      H3 Heading 3
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.editorSelectionMoreItem}
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => {
+                        void applySelectionTransform("header", 4);
+                        setSelectionInlineMoreOpen(false);
+                      }}
+                    >
+                      H4 Heading 4
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.editorSelectionMoreItem}
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => {
+                        void applySelectionTransform("header", 5);
+                        setSelectionInlineMoreOpen(false);
+                      }}
+                    >
+                      H5 Heading 5
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.editorSelectionMoreItem}
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => {
+                        void applySelectionTransform("header", 6);
+                        setSelectionInlineMoreOpen(false);
+                      }}
+                    >
+                      H6 Heading 6
+                    </button>
                     <button
                       type="button"
                       className={styles.editorSelectionMoreItem}

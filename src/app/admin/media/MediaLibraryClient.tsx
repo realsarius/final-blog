@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { optimizeImageForUpload } from "@/lib/client/optimizeImageUpload";
 import { interpolate } from "@/lib/interpolate";
 import styles from "./page.module.css";
 
@@ -170,8 +171,9 @@ export default function MediaLibraryClient({ locale, messages }: MediaLibraryCli
     let successCount = 0;
 
     for (const file of Array.from(incoming)) {
+      const optimizedFile = await optimizeImageForUpload(file);
       const payload = new FormData();
-      payload.set("file", file);
+      payload.set("file", optimizedFile);
       payload.set("folder", "uploads");
 
       try {

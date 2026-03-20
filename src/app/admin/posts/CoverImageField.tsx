@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useId, useRef, useState, type ChangeEvent, type DragEvent } from "react";
+import { optimizeImageForUpload } from "@/lib/client/optimizeImageUpload";
 import styles from "./post-form.module.css";
 
 const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
@@ -100,8 +101,9 @@ export default function CoverImageField({
     setError(null);
 
     try {
+      const optimizedFile = await optimizeImageForUpload(file);
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append("file", optimizedFile);
       formData.append("folder", "covers");
 
       const response = await fetch("/api/v1/uploads", {

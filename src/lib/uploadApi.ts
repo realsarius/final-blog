@@ -6,10 +6,10 @@ import { getClientIp, rateLimit } from "@/lib/rateLimit";
 import { logSecurityEvent } from "@/lib/securityLog";
 import { deleteImage, listImages, sanitizeUploadFolder, uploadImage } from "@/lib/uploadStorage";
 
-const MAX_FILE_SIZE = 6 * 1024 * 1024;
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 const CORS_METHODS = "GET, POST, DELETE, OPTIONS";
 const CORS_HEADERS = "Content-Type, Authorization";
+const DEFAULT_MAX_FILE_SIZE_MB = 6;
 
 function parseBoolean(value: string | undefined, fallback: boolean) {
   if (value === undefined) {
@@ -28,6 +28,20 @@ function parseBoolean(value: string | undefined, fallback: boolean) {
 function parsePositiveInt(value: string | undefined, fallback: number) {
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : fallback;
+}
+
+function resolveMaxUploadSizeBytes() {
+  const parsedValue = Number(process.env.UPLOAD_MAX_FILE_SIZE_MB ?? DEFAULT_MAX_FILE_SIZE_MB);
+  if (!Number.isFinite(parsedValue) || parsedValue <= 0) {
+    return DEFAULT_MAX_FILE_SIZE_MB * 1024 * 1024;
+  }
+  const clampedMb = Math.min(40, Math.max(1, parsedValue));
+  return Math.floor(clampedMb * 1024 * 1024);
+}
+
+function formatMaxUploadSizeMb(bytes: number) {
+  const mb = bytes / (1024 * 1024);
+  return Number.isInteger(mb) ? String(mb) : mb.toFixed(1);
 }
 
 function parseOrigin(value: string | null | undefined): string | null {
@@ -272,8 +286,13 @@ export async function handleUploadPost(request: Request) {
     return jsonWithCors(request, { success: 0, error: "Desteklenmeyen dosya." }, { status: 400 });
   }
 
-  if (file.size > MAX_FILE_SIZE) {
-    return jsonWithCors(request, { success: 0, error: "Dosya boyutu çok büyük." }, { status: 400 });
+  const maxUploadSizeBytes = resolveMaxUploadSizeBytes();
+  if (file.size > maxUploadSizeBytes) {
+    return jsonWithCors(
+      request,
+      { success: 0, error: `Dosya boyutu çok büyük. En fazla ${formatMaxUploadSizeMb(maxUploadSizeBytes)} MB yükleyebilirsiniz.` },
+      { status: 400 },
+    );
   }
 
   try {

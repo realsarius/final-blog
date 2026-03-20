@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type TouchEvent } from "react";
 import Link from "next/link";
 import NextImage from "next/image";
+import { optimizeImageForUpload } from "@/lib/client/optimizeImageUpload";
 import styles from "./page.module.css";
 
 type HeroSlide = {
@@ -667,15 +668,16 @@ export default function HomeHeroOverlay({
       if (!response.ok || data.ok !== true || !Array.isArray(data.items)) {
         throw new Error("Failed to load post options");
       }
+      const items = data.items;
       if (postRequestRef.current !== requestId) {
         return;
       }
 
-      setPosts(data.items);
+      setPosts(items);
       setPostTotalPages(Math.max(1, Number(data.totalPages) || 1));
       setPostCache((current) => {
         const next = { ...current };
-        data.items.forEach((item) => {
+        items.forEach((item) => {
           next[item.id] = item;
         });
         return next;
@@ -848,8 +850,9 @@ export default function HomeHeroOverlay({
   async function uploadToR2(file: File) {
     setIsUploading(true);
     try {
+      const optimizedFile = await optimizeImageForUpload(file);
       const formData = new FormData();
-      formData.set("file", file);
+      formData.set("file", optimizedFile);
       formData.set("folder", "hero");
 
       const response = await fetch("/api/uploads", {
