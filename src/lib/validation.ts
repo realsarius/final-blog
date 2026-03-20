@@ -63,9 +63,28 @@ type SafeParseLikeResult =
   | { success: true }
   | { success: false; error: { issues: Array<{ message?: string }> } };
 
-export function getFirstErrorMessage(result: SafeParseLikeResult) {
+const validationMessageMap: Record<string, string> = {
+  "İçerik en az 10 karakter olmalı.": "Content must be at least 10 characters.",
+  "Başlık en az 3 karakter olmalı.": "Title must be at least 3 characters.",
+  "Özet en fazla 300 karakter olmalı.": "Excerpt must be at most 300 characters.",
+  "Kapak görseli URL formatı geçersiz. Tam URL veya / ile başlayan yol girin.": "Invalid cover image URL format. Provide a full URL or a path starting with /.",
+  "İsim en az 2 karakter olmalı.": "Name must be at least 2 characters.",
+  "İsim en fazla 40 karakter olmalı.": "Name must be at most 40 characters.",
+  "Yeni parola en az 8 karakter olmalı.": "New password must be at least 8 characters.",
+  "Geçersiz veri.": "Invalid data.",
+};
+
+function translateValidationMessage(message: string, locale: "tr" | "en") {
+  if (locale === "tr") {
+    return message;
+  }
+  return validationMessageMap[message] ?? message;
+}
+
+export function getFirstErrorMessage(result: SafeParseLikeResult, locale: "tr" | "en" = "tr") {
   if (result.success) {
     return "";
   }
-  return result.error.issues[0]?.message ?? "Geçersiz veri.";
+  const rawMessage = result.error.issues[0]?.message ?? "Geçersiz veri.";
+  return translateValidationMessage(rawMessage, locale);
 }
