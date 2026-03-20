@@ -63,9 +63,9 @@ type HomeSearchContextValue = {
 
 const HomeSearchContext = createContext<HomeSearchContextValue | null>(null);
 
-function normalizeSearchText(value: string) {
+function normalizeSearchText(value: string, locale: "tr" | "en") {
   return value
-    .toLocaleLowerCase("tr-TR")
+    .toLocaleLowerCase(locale === "en" ? "en-US" : "tr-TR")
     .normalize("NFKD")
     .replace(/[\u0300-\u036f]/g, "");
 }
@@ -73,9 +73,10 @@ function normalizeSearchText(value: string) {
 interface HomeSearchProviderProps {
   posts: HomeSearchPost[];
   children: ReactNode;
+  locale?: "tr" | "en";
 }
 
-export default function HomeSearchProvider({ posts, children }: HomeSearchProviderProps) {
+export default function HomeSearchProvider({ posts, children, locale = "tr" }: HomeSearchProviderProps) {
   const [query, setQuery] = useState("");
 
   const preparedPosts = useMemo<ResolvedHomeSearchPost[]>(
@@ -93,13 +94,13 @@ export default function HomeSearchProvider({ posts, children }: HomeSearchProvid
           publishedAt: post.publishedAt ? new Date(post.publishedAt) : null,
           createdAt: new Date(post.createdAt),
           categories: post.categories,
-          normalizedSearchText: normalizeSearchText(searchText),
+          normalizedSearchText: normalizeSearchText(searchText, locale),
         };
       }),
-    [posts],
+    [posts, locale],
   );
 
-  const normalizedQuery = normalizeSearchText(query.trim());
+  const normalizedQuery = normalizeSearchText(query.trim(), locale);
   const hasQuery = normalizedQuery.length > 0;
 
   const filteredRaw = useMemo(
@@ -132,9 +133,9 @@ export default function HomeSearchProvider({ posts, children }: HomeSearchProvid
         id: post.id,
         title: post.title,
         slug: post.slug,
-        categoryName: post.categories[0]?.category.name ?? "Kategori yok",
+        categoryName: post.categories[0]?.category.name ?? (locale === "en" ? "No category" : "Kategori yok"),
       })),
-    [filteredRaw],
+    [filteredRaw, locale],
   );
 
   const value = useMemo<HomeSearchContextValue>(

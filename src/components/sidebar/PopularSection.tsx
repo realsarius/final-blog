@@ -12,14 +12,18 @@ interface PopularPost {
 
 interface PopularSectionProps {
   posts: PopularPost[];
+  locale?: "tr" | "en";
 }
 
-export default function PopularSection({ posts }: PopularSectionProps) {
+export default function PopularSection({ posts, locale = "tr" }: PopularSectionProps) {
   if (posts.length === 0) return null;
+  const t = locale === "en"
+    ? { heading: "Popular Posts" }
+    : { heading: "Popüler Yazılar" };
 
   return (
     <div className={styles.section}>
-      <h4 className={styles.heading}>Popüler Yazılar</h4>
+      <h4 className={styles.heading}>{t.heading}</h4>
       <ol className={styles.list}>
         {posts.map((post) => (
           <li key={post.id} className={styles.item}>
@@ -28,7 +32,7 @@ export default function PopularSection({ posts }: PopularSectionProps) {
                 {post.title}
               </Link>
               <span className={styles.date}>
-                {formatDate(post.publishedAt ?? post.createdAt)}
+                {formatDate(post.publishedAt ?? post.createdAt, false, locale)}
               </span>
             </div>
           </li>

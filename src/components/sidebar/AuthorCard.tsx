@@ -17,6 +17,7 @@ interface AuthorCardProps {
   author: AuthorPayload | null | undefined;
   isEditable?: boolean;
   enableFlip?: boolean;
+  locale?: "tr" | "en";
 }
 
 type UploadPostResponse = {
@@ -53,7 +54,40 @@ async function readJsonSafely<T>(response: Response): Promise<T | null> {
   }
 }
 
-export default function AuthorCard({ author, isEditable = false, enableFlip = false }: AuthorCardProps) {
+export default function AuthorCard({ author, isEditable = false, enableFlip = false, locale = "tr" }: AuthorCardProps) {
+  const t = locale === "en"
+    ? {
+      uploadFailed: "Image upload failed.",
+      saveFailed: "Save failed.",
+      editLabel: "Edit author card",
+      flipFront: "Flip author card to front",
+      flipBack: "Flip author card to back",
+      uploading: "Uploading...",
+      uploadImage: "Upload image",
+      cropX: "Horizontal crop",
+      cropY: "Vertical crop",
+      saving: "Saving...",
+      save: "Save",
+      author: "Author",
+      shortBio: "Short Biography",
+      fallbackBio: "Author information will be updated here soon.",
+    }
+    : {
+      uploadFailed: "Gorsel yuklenemedi.",
+      saveFailed: "Kaydetme basarisiz.",
+      editLabel: "Yazar kartini duzenle",
+      flipFront: "Yazar kartini on yuze cevir",
+      flipBack: "Yazar kartini arka yuze cevir",
+      uploading: "Yukleniyor...",
+      uploadImage: "Resim Yukle",
+      cropX: "Yatay Kirpma",
+      cropY: "Dikey Kirpma",
+      saving: "Kaydediliyor...",
+      save: "Kaydet",
+      author: "Yazar",
+      shortBio: "Kisa Biyografi",
+      fallbackBio: "Yazar bilgisi yakinda bu alanda guncellenecek.",
+    };
   const [avatarUrl, setAvatarUrl] = useState(author?.avatarUrl ?? "");
   const [avatarFocusX, setAvatarFocusX] = useState(clampFocus(author?.avatarFocusX));
   const [avatarFocusY, setAvatarFocusY] = useState(clampFocus(author?.avatarFocusY));
@@ -110,11 +144,11 @@ export default function AuthorCard({ author, isEditable = false, enableFlip = fa
       });
       const data = await readJsonSafely<UploadPostResponse>(response);
       if (!response.ok || data?.success !== 1 || !data?.file?.url) {
-        throw new Error(data?.error ?? "Gorsel yuklenemedi.");
+        throw new Error(data?.error ?? t.uploadFailed);
       }
       setAvatarUrl(data.file.url);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Gorsel yuklenemedi.";
+      const message = error instanceof Error ? error.message : t.uploadFailed;
       window.alert(message);
     } finally {
       setIsUploading(false);
@@ -137,7 +171,7 @@ export default function AuthorCard({ author, isEditable = false, enableFlip = fa
       const data = await readJsonSafely<SaveAuthorResponse>(response);
 
       if (!response.ok || !data?.ok || !data.author) {
-        throw new Error(data?.error ?? "Kaydetme basarisiz.");
+        throw new Error(data?.error ?? t.saveFailed);
       }
 
       setAvatarUrl(data.author.avatarUrl ?? "");
@@ -152,7 +186,7 @@ export default function AuthorCard({ author, isEditable = false, enableFlip = fa
       }));
       setIsEditorOpen(false);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Kaydetme basarisiz.";
+      const message = error instanceof Error ? error.message : t.saveFailed;
       window.alert(message);
     } finally {
       setIsSaving(false);
@@ -171,7 +205,7 @@ export default function AuthorCard({ author, isEditable = false, enableFlip = fa
         <button
           type="button"
           className={styles.editButton}
-          aria-label="Yazar kartini duzenle"
+          aria-label={t.editLabel}
           onClick={() => {
             setIsFlipped(false);
             setIsEditorOpen((open) => !open);
@@ -188,7 +222,7 @@ export default function AuthorCard({ author, isEditable = false, enableFlip = fa
         <button
           type="button"
           className={styles.flipButton}
-          aria-label={isFlipped ? "Yazar kartini on yuze cevir" : "Yazar kartini arka yuze cevir"}
+          aria-label={isFlipped ? t.flipFront : t.flipBack}
           aria-pressed={isFlipped}
           onClick={() => setIsFlipped((current) => !current)}
         >
@@ -214,11 +248,11 @@ export default function AuthorCard({ author, isEditable = false, enableFlip = fa
                 event.currentTarget.value = "";
               }}
             />
-            {isUploading ? "Yukleniyor..." : "Resim Yukle"}
+            {isUploading ? t.uploading : t.uploadImage}
           </label>
 
           <div className={styles.sliderRow}>
-            <label htmlFor={`${idPrefix}-author-focus-x`}>Yatay Kirpma</label>
+            <label htmlFor={`${idPrefix}-author-focus-x`}>{t.cropX}</label>
             <input
               id={`${idPrefix}-author-focus-x`}
               type="range"
@@ -230,7 +264,7 @@ export default function AuthorCard({ author, isEditable = false, enableFlip = fa
             />
           </div>
           <div className={styles.sliderRow}>
-            <label htmlFor={`${idPrefix}-author-focus-y`}>Dikey Kirpma</label>
+            <label htmlFor={`${idPrefix}-author-focus-y`}>{t.cropY}</label>
             <input
               id={`${idPrefix}-author-focus-y`}
               type="range"
@@ -244,7 +278,7 @@ export default function AuthorCard({ author, isEditable = false, enableFlip = fa
 
           <div className={styles.editorActions}>
             <button type="button" onClick={saveAuthorCard} disabled={isSaving}>
-              {isSaving ? "Kaydediliyor..." : "Kaydet"}
+              {isSaving ? t.saving : t.save}
             </button>
           </div>
         </div>
@@ -267,7 +301,7 @@ export default function AuthorCard({ author, isEditable = false, enableFlip = fa
             )}
           </div>
           <div className={styles.info}>
-            <p className={styles.label}>Yazar</p>
+            <p className={styles.label}>{t.author}</p>
             <h3 className={styles.name}>
               {author.firstName} {author.lastName}
             </h3>
@@ -277,14 +311,14 @@ export default function AuthorCard({ author, isEditable = false, enableFlip = fa
 
         <div className={`${styles.face} ${styles.back}`}>
           <div className={styles.backContent}>
-            <p className={styles.backLabel}>Kisa Biyografi</p>
+            <p className={styles.backLabel}>{t.shortBio}</p>
             <h3 className={styles.backName}>
               {author.firstName} {author.lastName}
             </h3>
             <p className={styles.backBio}>
               {author.bio?.trim()
                 ? author.bio
-                : "Yazar bilgisi yakinda bu alanda guncellenecek."}
+                : t.fallbackBio}
             </p>
           </div>
         </div>

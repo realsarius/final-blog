@@ -13,15 +13,26 @@ import BackToTopButton from "@/components/layout/BackToTopButton";
 import HomeSearchProvider, { type HomeSearchPost } from "@/components/blog/HomeSearchProvider";
 import SidebarArticleSearch from "@/components/sidebar/SidebarArticleSearch";
 import HomeHeroOverlay from "./HomeHeroOverlay";
+import { getServerLocale } from "@/lib/i18n";
+import { getSiteName } from "@/lib/seo";
 
 type HeroTransitionDirection = "left" | "right";
 
-export const metadata: Metadata = {
-  title: "Ana Sayfa",
-  description: "Doğadan ilham alan hikayeler, notlar ve son yayınlanan yazılar.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getServerLocale();
+  return locale === "en"
+    ? { title: "Home", description: "Stories inspired by nature, notes, and latest published posts." }
+    : { title: "Ana Sayfa", description: "Doğadan ilham alan hikayeler, notlar ve son yayınlanan yazılar." };
+}
 
 export default async function HomePage() {
+  const locale = await getServerLocale();
+  const siteName = await getSiteName();
+  const [brandFirst, ...brandRest] = siteName.split(" ");
+  const brandSecond = brandRest.join(" ") || brandFirst;
+  const t = locale === "en"
+    ? { latest: "Latest Posts", noPosts: "No published post yet." }
+    : { latest: "Son Yazılar", noPosts: "Henüz yayınlanmış bir yazı yok." };
   const sessionPromise = getServerSession(authOptions);
   const postsPromise = prisma.post.findMany({
     where: { status: "PUBLISHED" },
@@ -183,14 +194,15 @@ export default async function HomePage() {
           initialSettings={heroSettings}
           availablePosts={availablePosts}
           isAdmin={isAdmin}
+          locale={locale}
         />
         <div className={styles.heroGhost} aria-hidden="true">
-          Berkan&apos;ın<br />Notları
+          {brandFirst}<br />{brandSecond}
         </div>
         <div className={`container ${styles.heroInner}`}>
           <div className={styles.heroText}>
             <div className={styles.heroClipped}>
-              Berkan&apos;ın<br />Notları
+              {brandFirst}<br />{brandSecond}
             </div>
           </div>
           {author && (
@@ -199,7 +211,7 @@ export default async function HomePage() {
               data-author-location="hero"
               aria-hidden="false"
             >
-              <AuthorCard author={author} isEditable={isAdmin} />
+              <AuthorCard author={author} isEditable={isAdmin} locale={locale} />
             </div>
           )}
         </div>
@@ -208,18 +220,18 @@ export default async function HomePage() {
       <CategoryNav />
 
       <div className="container">
-        <HomeSearchProvider posts={explorerPosts}>
+        <HomeSearchProvider posts={explorerPosts} locale={locale}>
           <div className={styles.contentGrid}>
             <main className={styles.mainCol}>
               <div className={styles.sectionHeader}>
-                <h2 className={styles.sectionTitle}>Son Yazılar</h2>
+                <h2 className={styles.sectionTitle}>{t.latest}</h2>
               </div>
               {latestPosts.length === 0 ? (
                 <div className={styles.empty}>
-                  <p>Henüz yayınlanmış bir yazı yok.</p>
+                  <p>{t.noPosts}</p>
                 </div>
               ) : (
-                <HomeArticleExplorer />
+                <HomeArticleExplorer locale={locale} />
               )}
             </main>
 
@@ -230,13 +242,13 @@ export default async function HomePage() {
                   data-author-location="sidebar"
                   aria-hidden="true"
                 >
-                  <AuthorCard author={author} isEditable={isAdmin} enableFlip />
+                  <AuthorCard author={author} isEditable={isAdmin} enableFlip locale={locale} />
                 </div>
               )}
               <div className={styles.sidebarStack}>
-                {latestPosts.length > 0 ? <SidebarArticleSearch /> : null}
-                <NewsletterWidget />
-                <PopularSection posts={popularPosts} />
+                {latestPosts.length > 0 ? <SidebarArticleSearch locale={locale} /> : null}
+                <NewsletterWidget locale={locale} />
+                <PopularSection posts={popularPosts} locale={locale} />
               </div>
             </aside>
           </div>

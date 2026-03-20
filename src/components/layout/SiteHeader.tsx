@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { getMessages, getServerLocale } from "@/lib/i18n";
-import LocaleSwitcher from "@/components/layout/LocaleSwitcher";
 import styles from "./SiteHeader.module.css";
 
 export default async function SiteHeader() {
@@ -16,7 +15,6 @@ export default async function SiteHeader() {
         </Link>
         <div className={styles.actions}>
           <Link href="/contact">{messages.public.header.contact}</Link>
-          <LocaleSwitcher currentLocale={locale} />
         </div>
       </div>
     </header>

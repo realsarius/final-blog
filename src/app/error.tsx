@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import styles from "./error.module.css";
 
 export default function ErrorPage({
@@ -10,14 +11,35 @@ export default function ErrorPage({
   error: Error;
   reset: () => void;
 }) {
+  const [locale, setLocale] = useState<"tr" | "en">("tr");
+
+  useEffect(() => {
+    const htmlLang = document.documentElement.lang;
+    setLocale(htmlLang === "en" ? "en" : "tr");
+  }, []);
+
+  const t = locale === "en"
+    ? {
+      title: "Something went wrong",
+      fallback: "An unexpected error occurred.",
+      retry: "Try again",
+      home: "Back to home",
+    }
+    : {
+      title: "Bir sorun oluştu",
+      fallback: "Beklenmeyen bir hata oluştu.",
+      retry: "Tekrar dene",
+      home: "Ana sayfaya dön",
+    };
+
   return (
     <div className={styles.page}>
       <div className="container">
-        <h1>Bir sorun oluştu</h1>
-        <p>{error.message || "Beklenmeyen bir hata oluştu."}</p>
+        <h1>{t.title}</h1>
+        <p>{error.message || t.fallback}</p>
         <div className={styles.actions}>
-          <button onClick={reset}>Tekrar dene</button>
-          <Link href="/">Ana sayfaya dön</Link>
+          <button onClick={reset}>{t.retry}</button>
+          <Link href="/">{t.home}</Link>
         </div>
       </div>
     </div>

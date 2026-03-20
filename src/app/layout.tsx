@@ -3,6 +3,7 @@ import { Space_Grotesk, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { getSiteDescription, getSiteName, getSiteUrl } from "@/lib/seo";
 import { Toaster } from "sonner";
+import { getServerLocale } from "@/lib/i18n";
 
 const spaceGrotesk = Space_Grotesk({
   variable: "--font-space-grotesk",
@@ -53,13 +54,15 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const locale = await getServerLocale();
+
   return (
-    <html lang="tr">
+    <html lang={locale}>
       <body className={`${spaceGrotesk.variable} ${playfairDisplay.variable}`}>
         {children}
         <Toaster richColors closeButton position="top-right" />

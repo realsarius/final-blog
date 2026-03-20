@@ -2,11 +2,10 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import type { Locale } from "@/lib/i18n";
 import styles from "./LocaleSwitcher.module.css";
 
 type LocaleSwitcherProps = {
-  currentLocale: Locale;
+  currentLocale: "tr" | "en";
 };
 
 function buildRedirectPath(pathname: string, searchParams: URLSearchParams) {
@@ -18,9 +17,10 @@ export default function LocaleSwitcher({ currentLocale }: LocaleSwitcherProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const redirectPath = buildRedirectPath(pathname, new URLSearchParams(searchParams.toString()));
+  const ariaLabel = currentLocale === "en" ? "Language selector" : "Dil seçimi";
 
   return (
-    <div className={styles.switcher} aria-label="Dil seçimi">
+    <div className={styles.switcher} aria-label={ariaLabel}>
       <Link
         href={`/api/locale?locale=tr&redirect=${encodeURIComponent(redirectPath)}`}
         className={`${styles.link} ${currentLocale === "tr" ? styles.active : ""}`}

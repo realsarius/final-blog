@@ -87,6 +87,7 @@ interface HomeHeroOverlayProps {
   initialSettings: HeroSettings;
   availablePosts: PostOption[];
   isAdmin: boolean;
+  locale?: "tr" | "en";
 }
 
 function normalizeAutoplaySeconds(value: number) {
@@ -118,7 +119,126 @@ function normalizeHexColor(value: unknown) {
   return trimmed;
 }
 
-export default function HomeHeroOverlay({ initialSlides, initialSettings, availablePosts, isAdmin }: HomeHeroOverlayProps) {
+export default function HomeHeroOverlay({
+  initialSlides,
+  initialSettings,
+  availablePosts,
+  isAdmin,
+  locale = "tr",
+}: HomeHeroOverlayProps) {
+  const t = locale === "en"
+    ? {
+      r2LoadError: "R2 images could not be loaded.",
+      featuredUpdateFailed: "Featured state could not be updated.",
+      selectImageWarning: "Please select an image or make sure the selected post has a cover image.",
+      featuredMarkFailed: "Post could not be marked as featured.",
+      uploadFailed: "Upload failed.",
+      saveFailed: "An error occurred while saving.",
+      heroSliderAria: "Hero slider. You can navigate with left and right arrow keys.",
+      prevSlide: "Previous slide",
+      nextSlide: "Next slide",
+      featuredPostAlt: "Featured post",
+      openPost: "Open Post",
+      dotsAria: "Hero slide navigation",
+      goToSlide: "Go to slide {index}",
+      editHero: "Edit hero layout",
+      heroEditor: "Hero Editor",
+      close: "Close",
+      addSlide: "Add Slide",
+      post: "Post",
+      imageOnly: "Image-only slide",
+      selectedImage: "Selected Image",
+      none: "None",
+      clear: "Clear",
+      markFeatured: "Mark as featured if post is selected",
+      addToSlides: "Add to slides",
+      selectedSlides: "Selected Slides",
+      autoColorAll: "Auto Color All",
+      noSlides: "No slides added yet.",
+      noPostLink: "No post link",
+      left: "Left",
+      right: "Right",
+      moveUp: "Move up",
+      moveDown: "Move down",
+      autoColor: "Auto Color",
+      coloring: "Color...",
+      delete: "Delete",
+      playback: "Playback & Transition",
+      slideDuration: "Slide duration (seconds)",
+      transitionDirection: "Transition direction",
+      slideLeft: "Slide left",
+      slideRight: "Slide right",
+      postSelection: "Post Selection & Featured",
+      removeFeatured: "Remove Featured",
+      makeFeatured: "Make Featured",
+      r2Images: "R2 Images",
+      heroFolder: "hero folder",
+      uploadsFolder: "uploads folder",
+      refresh: "Refresh",
+      uploadFile: "Upload File",
+      loading: "Loading...",
+      imagesLoading: "Images are loading...",
+      saving: "Saving...",
+      save: "Save",
+      independentImage: "Standalone image",
+      noPostText: "No post",
+    }
+    : {
+      r2LoadError: "R2 gorselleri yuklenemedi.",
+      featuredUpdateFailed: "Featured guncellenemedi.",
+      selectImageWarning: "Lutfen bir gorsel secin ya da yazida kapak gorseli oldugundan emin olun.",
+      featuredMarkFailed: "Yazi featured olarak isaretlenemedi.",
+      uploadFailed: "Yukleme basarisiz.",
+      saveFailed: "Kaydetme sirasinda bir hata olustu.",
+      heroSliderAria: "Hero slider. Sol ve sag ok tuslariyla gecis yapabilirsiniz.",
+      prevSlide: "Onceki slayt",
+      nextSlide: "Sonraki slayt",
+      featuredPostAlt: "One cikan yazi",
+      openPost: "Yaziyi Ac",
+      dotsAria: "Hero slayt navigasyonu",
+      goToSlide: "{index}. slayta git",
+      editHero: "Hero duzenini duzenle",
+      heroEditor: "Hero Duzenleyici",
+      close: "Kapat",
+      addSlide: "Slayt Ekle",
+      post: "Yazi",
+      imageOnly: "Sadece gorsel slaydi",
+      selectedImage: "Secili Gorsel",
+      none: "Yok",
+      clear: "Temizle",
+      markFeatured: "Yazi seciliyse featured yap",
+      addToSlides: "Slayta Ekle",
+      selectedSlides: "Secili Slaytlar",
+      autoColorAll: "Tumune Oto Renk",
+      noSlides: "Henuz slayt eklenmedi.",
+      noPostLink: "Yazi bagi yok",
+      left: "Sol",
+      right: "Sag",
+      moveUp: "Yukari al",
+      moveDown: "Asagi al",
+      autoColor: "Oto Renk",
+      coloring: "Renk...",
+      delete: "Sil",
+      playback: "Oynatma ve Gecis",
+      slideDuration: "Slayt suresi (saniye)",
+      transitionDirection: "Gecis yonu",
+      slideLeft: "Sola kay",
+      slideRight: "Saga kay",
+      postSelection: "Yazi Secimi ve Featured",
+      removeFeatured: "Featured Kaldir",
+      makeFeatured: "Featured Yap",
+      r2Images: "R2 Gorselleri",
+      heroFolder: "hero klasoru",
+      uploadsFolder: "uploads klasoru",
+      refresh: "Yenile",
+      uploadFile: "Dosya Yukle",
+      loading: "Yukleniyor...",
+      imagesLoading: "Gorseller yukleniyor...",
+      saving: "Kaydediliyor...",
+      save: "Kaydet",
+      independentImage: "Bagimsiz gorsel",
+      noPostText: "Yazi yok",
+    };
   const [slides, setSlides] = useState<HeroSlide[]>(initialSlides);
   const [activeIndex, setActiveIndex] = useState(0);
   const [trackIndex, setTrackIndex] = useState(0);
@@ -511,12 +631,12 @@ export default function HomeHeroOverlay({ initialSlides, initialSettings, availa
       const data = await response.json() as UploadListResponse;
 
       if (!response.ok || data.success !== 1 || !Array.isArray(data.files)) {
-        throw new Error(data.error ?? "R2 gorselleri yuklenemedi.");
+        throw new Error(data.error ?? t.r2LoadError);
       }
 
       setLibraryImages(data.files);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "R2 gorselleri yuklenemedi.";
+      const message = error instanceof Error ? error.message : t.r2LoadError;
       setLibraryError(message);
     } finally {
       setIsLoadingLibrary(false);
@@ -544,7 +664,7 @@ export default function HomeHeroOverlay({ initialSlides, initialSettings, availa
     });
 
     if (!response.ok) {
-      throw new Error("Featured guncellenemedi.");
+      throw new Error(t.featuredUpdateFailed);
     }
 
     setPosts((current) => current.map((post) => (
@@ -555,7 +675,7 @@ export default function HomeHeroOverlay({ initialSlides, initialSettings, availa
   async function addComposedSlide() {
     const imageUrl = selectedImageUrl || selectedPost?.coverImageUrl || (selectedPost ? GENERIC_COVER_URL : "");
     if (!imageUrl) {
-      window.alert("Lutfen bir gorsel secin ya da yazida kapak gorseli oldugundan emin olun.");
+      window.alert(t.selectImageWarning);
       return;
     }
 
@@ -563,7 +683,7 @@ export default function HomeHeroOverlay({ initialSlides, initialSettings, availa
       try {
         await toggleFeatured(selectedPost.id, true);
       } catch {
-        window.alert("Yazi featured olarak isaretlenemedi.");
+        window.alert(t.featuredMarkFailed);
       }
     }
 
@@ -636,7 +756,7 @@ export default function HomeHeroOverlay({ initialSlides, initialSettings, availa
 
       const data = await response.json() as UploadPostResponse;
       if (!response.ok || data.success !== 1 || !data.file?.url) {
-        throw new Error(data.error ?? "Yukleme basarisiz.");
+        throw new Error(data.error ?? t.uploadFailed);
       }
 
       const freshImage = {
@@ -646,7 +766,7 @@ export default function HomeHeroOverlay({ initialSlides, initialSettings, availa
       setLibraryImages((current) => [freshImage, ...current]);
       setSelectedImageUrl(data.file.url);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Yukleme basarisiz.";
+      const message = error instanceof Error ? error.message : t.uploadFailed;
       window.alert(message);
     } finally {
       setIsUploading(false);
@@ -678,7 +798,7 @@ export default function HomeHeroOverlay({ initialSlides, initialSettings, availa
 
       const data = await response.json() as SaveHeroResponse;
       if (!response.ok || !data.ok || !Array.isArray(data.slides)) {
-        throw new Error(data.error ?? "Kaydetme sirasinda bir hata olustu.");
+        throw new Error(data.error ?? t.saveFailed);
       }
 
       const normalized: HeroSlide[] = data.slides.map((slide) => ({
@@ -700,7 +820,7 @@ export default function HomeHeroOverlay({ initialSlides, initialSettings, availa
       }
       setIsEditorOpen(false);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Kaydetme sirasinda bir hata olustu.";
+      const message = error instanceof Error ? error.message : t.saveFailed;
       window.alert(message);
     } finally {
       setIsSaving(false);
@@ -716,7 +836,7 @@ export default function HomeHeroOverlay({ initialSlides, initialSettings, availa
           onKeyDown={handleHeroKeyDown}
           onTouchStart={handleHeroTouchStart}
           onTouchEnd={handleHeroTouchEnd}
-          aria-label="Hero slider. Sol ve sag ok tuslariyla gecis yapabilirsiniz."
+          aria-label={t.heroSliderAria}
         >
           <div
             className={`${styles.heroTrack} ${styles.heroTrackTransition}`}
@@ -746,7 +866,7 @@ export default function HomeHeroOverlay({ initialSlides, initialSettings, availa
                   setTransitionDirection("right");
                   goToPreviousSlide();
                 }}
-                aria-label="Onceki slayt"
+                aria-label={t.prevSlide}
               >
                 <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
                   <path d="M14.5 5.5 8 12l6.5 6.5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
@@ -760,7 +880,7 @@ export default function HomeHeroOverlay({ initialSlides, initialSettings, availa
                   setTransitionDirection("left");
                   goToNextSlide();
                 }}
-                aria-label="Sonraki slayt"
+                aria-label={t.nextSlide}
               >
                 <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
                   <path d="M9.5 5.5 16 12l-6.5 6.5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
@@ -777,13 +897,13 @@ export default function HomeHeroOverlay({ initialSlides, initialSettings, availa
             <Link href={`/blog/${activeSlide.postSlug}`} className={styles.heroActiveCard}>
               <NextImage
                 src={activeSlide.postCoverImageUrl ?? GENERIC_COVER_URL}
-                alt={activeSlide.postTitle ?? "One cikan yazi"}
+                alt={activeSlide.postTitle ?? t.featuredPostAlt}
                 width={68}
                 height={68}
                 className={styles.heroActiveThumb}
               />
               <span className={styles.heroActiveMeta}>
-                <strong>{activeSlide.postTitle ?? "Yaziyi Ac"}</strong>
+                <strong>{activeSlide.postTitle ?? t.openPost}</strong>
                 {activeSlide.postExcerpt ? <em>{activeSlide.postExcerpt}</em> : null}
               </span>
             </Link>
@@ -792,14 +912,14 @@ export default function HomeHeroOverlay({ initialSlides, initialSettings, availa
       ) : null}
 
       {slides.length > 0 ? (
-        <div className={styles.heroDots} aria-label="Hero slayt navigasyonu">
+        <div className={styles.heroDots} aria-label={t.dotsAria}>
           {slides.map((slide, index) => (
             <button
               key={`${slide.imageUrl}-${index}`}
               type="button"
               className={`${styles.heroDot} ${index === activeIndex ? styles.heroDotActive : ""}`}
               onClick={() => goToSlide(index)}
-              aria-label={`${index + 1}. slayta git`}
+              aria-label={t.goToSlide.replace("{index}", String(index + 1))}
               aria-current={index === activeIndex ? "true" : undefined}
               disabled={slides.length === 1}
             />
@@ -821,7 +941,7 @@ export default function HomeHeroOverlay({ initialSlides, initialSettings, availa
                 return next;
               });
             }}
-            aria-label="Hero duzenini duzenle"
+            aria-label={t.editHero}
           >
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path d="M4 20h4l10.5-10.5a1.414 1.414 0 0 0 0-2L16.5 5.5a1.414 1.414 0 0 0-2 0L4 16v4z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -832,22 +952,22 @@ export default function HomeHeroOverlay({ initialSlides, initialSettings, availa
           {isEditorOpen ? (
             <div className={styles.heroEditor}>
               <div className={styles.heroEditorHeader}>
-                <h3>Hero Duzenleyici</h3>
-                <button type="button" onClick={() => setIsEditorOpen(false)}>Kapat</button>
+                <h3>{t.heroEditor}</h3>
+                <button type="button" onClick={() => setIsEditorOpen(false)}>{t.close}</button>
               </div>
 
               <div className={styles.heroEditorBody}>
                 <div className={styles.heroEditorBlock}>
-                  <h4>Slayt Ekle</h4>
+                  <h4>{t.addSlide}</h4>
                   <div className={styles.heroComposerRow}>
-                    <label htmlFor="hero-post-picker">Yazi</label>
+                    <label htmlFor="hero-post-picker">{t.post}</label>
                     <select
                       id="hero-post-picker"
                       className={styles.heroSelect}
                       value={selectedPostId}
                       onChange={(event) => setSelectedPostId(event.target.value)}
                     >
-                      <option value="">Sadece gorsel slaydi</option>
+                      <option value="">{t.imageOnly}</option>
                       {posts.map((post) => (
                         <option key={post.id} value={post.id}>
                           {post.title}{post.featured ? " (featured)" : ""}
@@ -857,11 +977,11 @@ export default function HomeHeroOverlay({ initialSlides, initialSettings, availa
                   </div>
 
                   <div className={styles.heroComposerRow}>
-                    <label>Secili Gorsel</label>
+                    <label>{t.selectedImage}</label>
                     <div className={styles.heroSelectedImage}>
-                      <span>{selectedImageUrl || selectedPost?.coverImageUrl || "Yok"}</span>
+                      <span>{selectedImageUrl || selectedPost?.coverImageUrl || t.none}</span>
                       {selectedImageUrl ? (
-                        <button type="button" onClick={() => setSelectedImageUrl("")}>Temizle</button>
+                        <button type="button" onClick={() => setSelectedImageUrl("")}>{t.clear}</button>
                       ) : null}
                     </div>
                   </div>
@@ -872,17 +992,17 @@ export default function HomeHeroOverlay({ initialSlides, initialSettings, availa
                       checked={markAsFeatured}
                       onChange={(event) => setMarkAsFeatured(event.target.checked)}
                     />
-                    <span>Yazi seciliyse featured yap</span>
+                    <span>{t.markFeatured}</span>
                   </label>
 
                   <div className={styles.heroComposerActions}>
-                    <button type="button" onClick={addComposedSlide}>Slayta Ekle</button>
+                    <button type="button" onClick={addComposedSlide}>{t.addToSlides}</button>
                   </div>
                 </div>
 
                 <div className={styles.heroEditorBlock}>
                   <div className={styles.heroBlockHeader}>
-                    <h4>Secili Slaytlar</h4>
+                    <h4>{t.selectedSlides}</h4>
                     <button
                       type="button"
                       onClick={() => {
@@ -890,10 +1010,10 @@ export default function HomeHeroOverlay({ initialSlides, initialSettings, availa
                       }}
                       disabled={slides.length === 0 || colorLoadingIndex !== null}
                     >
-                      Tumune Oto Renk
+                      {t.autoColorAll}
                     </button>
                   </div>
-                  {slides.length === 0 ? <p>Henuz slayt eklenmedi.</p> : null}
+                  {slides.length === 0 ? <p>{t.noSlides}</p> : null}
                   {slides.map((slide, index) => (
                     <div key={`${slide.imageUrl}-${slide.postId ?? "none"}-${index}`} className={styles.heroSlideRow}>
                       <NextImage
@@ -904,11 +1024,11 @@ export default function HomeHeroOverlay({ initialSlides, initialSettings, availa
                         className={styles.heroSlideThumb}
                       />
                       <div>
-                        <strong>{slide.postTitle ?? "Bagimsiz gorsel"}</strong>
-                        <p>{slide.postSlug ? `/blog/${slide.postSlug}` : "Yazi bagi yok"}</p>
+                        <strong>{slide.postTitle ?? t.independentImage}</strong>
+                        <p>{slide.postSlug ? `/blog/${slide.postSlug}` : t.noPostLink}</p>
                         <div className={styles.heroColorRow}>
                           <label>
-                            Sol
+                            {t.left}
                             <input
                               type="color"
                               value={normalizeHexColor(slide.titleColorLeft) ?? DEFAULT_TITLE_COLOR_LEFT}
@@ -916,7 +1036,7 @@ export default function HomeHeroOverlay({ initialSlides, initialSettings, availa
                             />
                           </label>
                           <label>
-                            Sag
+                            {t.right}
                             <input
                               type="color"
                               value={normalizeHexColor(slide.titleColorRight) ?? DEFAULT_TITLE_COLOR_RIGHT}
@@ -926,8 +1046,8 @@ export default function HomeHeroOverlay({ initialSlides, initialSettings, availa
                         </div>
                       </div>
                       <div className={styles.heroSlideRowActions}>
-                        <button type="button" onClick={() => moveSlide(index, -1)} aria-label="Yukari al">↑</button>
-                        <button type="button" onClick={() => moveSlide(index, 1)} aria-label="Asagi al">↓</button>
+                        <button type="button" onClick={() => moveSlide(index, -1)} aria-label={t.moveUp}>↑</button>
+                        <button type="button" onClick={() => moveSlide(index, 1)} aria-label={t.moveDown}>↓</button>
                         <button
                           type="button"
                           onClick={() => {
@@ -935,18 +1055,18 @@ export default function HomeHeroOverlay({ initialSlides, initialSettings, availa
                           }}
                           disabled={colorLoadingIndex === index}
                         >
-                          {colorLoadingIndex === index ? "Renk..." : "Oto Renk"}
+                          {colorLoadingIndex === index ? t.coloring : t.autoColor}
                         </button>
-                        <button type="button" onClick={() => removeSlide(index)}>Sil</button>
+                        <button type="button" onClick={() => removeSlide(index)}>{t.delete}</button>
                       </div>
                     </div>
                   ))}
                 </div>
 
                 <div className={styles.heroEditorBlock}>
-                  <h4>Oynatma ve Gecis</h4>
+                  <h4>{t.playback}</h4>
                   <div className={styles.heroComposerRow}>
-                    <label htmlFor="hero-autoplay-seconds">Slayt suresi (saniye)</label>
+                    <label htmlFor="hero-autoplay-seconds">{t.slideDuration}</label>
                     <input
                       id="hero-autoplay-seconds"
                       type="number"
@@ -961,21 +1081,21 @@ export default function HomeHeroOverlay({ initialSlides, initialSettings, availa
                     />
                   </div>
                   <div className={styles.heroComposerRow}>
-                    <label htmlFor="hero-transition-direction">Gecis yonu</label>
+                    <label htmlFor="hero-transition-direction">{t.transitionDirection}</label>
                     <select
                       id="hero-transition-direction"
                       className={styles.heroSelect}
                       value={transitionDirection}
                       onChange={(event) => setTransitionDirection(sanitizeDirection(event.target.value))}
                     >
-                      <option value="left">Sola kay</option>
-                      <option value="right">Saga kay</option>
+                      <option value="left">{t.slideLeft}</option>
+                      <option value="right">{t.slideRight}</option>
                     </select>
                   </div>
                 </div>
 
                 <div className={styles.heroEditorBlock}>
-                  <h4>Yazi Secimi ve Featured</h4>
+                  <h4>{t.postSelection}</h4>
                   <div className={styles.heroPostList}>
                     {posts.map((post) => (
                       <div key={post.id} className={styles.heroPostRow}>
@@ -986,7 +1106,7 @@ export default function HomeHeroOverlay({ initialSlides, initialSettings, availa
                             void toggleFeatured(post.id, !post.featured);
                           }}
                         >
-                          {post.featured ? "Featured Kaldir" : "Featured Yap"}
+                          {post.featured ? t.removeFeatured : t.makeFeatured}
                         </button>
                       </div>
                     ))}
@@ -994,7 +1114,7 @@ export default function HomeHeroOverlay({ initialSlides, initialSettings, availa
                 </div>
 
                 <div className={styles.heroEditorBlock}>
-                  <h4>R2 Gorselleri</h4>
+                  <h4>{t.r2Images}</h4>
                   <div className={styles.heroLibraryTop}>
                     <select
                       className={styles.heroSelect}
@@ -1005,10 +1125,10 @@ export default function HomeHeroOverlay({ initialSlides, initialSettings, availa
                         void loadLibrary(next);
                       }}
                     >
-                      <option value="hero">hero klasoru</option>
-                      <option value="uploads">uploads klasoru</option>
+                      <option value="hero">{t.heroFolder}</option>
+                      <option value="uploads">{t.uploadsFolder}</option>
                     </select>
-                    <button type="button" onClick={() => void loadLibrary()}>Yenile</button>
+                    <button type="button" onClick={() => void loadLibrary()}>{t.refresh}</button>
                     <label className={styles.heroUploadButton}>
                       <input
                         type="file"
@@ -1022,10 +1142,10 @@ export default function HomeHeroOverlay({ initialSlides, initialSettings, availa
                           event.currentTarget.value = "";
                         }}
                       />
-                      {isUploading ? "Yukleniyor..." : "Dosya Yukle"}
+                      {isUploading ? t.loading : t.uploadFile}
                     </label>
                   </div>
-                  {isLoadingLibrary ? <p>Gorseller yukleniyor...</p> : null}
+                  {isLoadingLibrary ? <p>{t.imagesLoading}</p> : null}
                   {libraryError ? <p>{libraryError}</p> : null}
                   <div className={styles.heroImageGrid}>
                     {libraryImages.map((image) => (
@@ -1051,7 +1171,7 @@ export default function HomeHeroOverlay({ initialSlides, initialSettings, availa
 
               <div className={styles.heroEditorFooter}>
                 <button type="button" onClick={saveSlides} disabled={isSaving}>
-                  {isSaving ? "Kaydediliyor..." : "Kaydet"}
+                  {isSaving ? t.saving : t.save}
                 </button>
               </div>
             </div>

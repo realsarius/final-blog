@@ -7,9 +7,40 @@ import {
   getSiteDescription,
   getSiteName,
 } from "@/lib/seo";
+import { getServerLocale } from "@/lib/i18n";
 import styles from "./SiteFooter.module.css";
 
 export default async function SiteFooter() {
+  const locale = await getServerLocale();
+  const t = locale === "en"
+    ? {
+      navAria: "Site links",
+      site: "Site",
+      about: "About",
+      posts: "Posts",
+      contact: "Contact",
+      newsletter: "Newsletter",
+      newsletterText: "Get notified by email when new posts are published.",
+      emailAria: "Email address",
+      emailPlaceholder: "Your email address",
+      subscribe: "Subscribe",
+      rights: "All rights reserved.",
+      privacy: "Privacy",
+    }
+    : {
+      navAria: "Site bağlantıları",
+      site: "Site",
+      about: "Hakkımda",
+      posts: "Yazılar",
+      contact: "İletişim",
+      newsletter: "Bülten",
+      newsletterText: "Yeni yazılar yayınlandığında e-posta ile haberdar olun.",
+      emailAria: "E-posta adresi",
+      emailPlaceholder: "E-posta adresiniz",
+      subscribe: "Abone Ol",
+      rights: "Tüm hakları saklıdır.",
+      privacy: "Gizlilik",
+    };
   const currentYear = new Date().getFullYear();
   const siteName = await getSiteName();
   const siteDescription = await getSiteDescription();
@@ -33,17 +64,17 @@ export default async function SiteFooter() {
                 </p>
               </div>
 
-              <nav className={styles.linkColumn} aria-label="Site bağlantıları">
-                <p className={styles.columnTitle}>Site</p>
-                <Link href="/about">Hakkımda</Link>
-                <Link href="/blog">Yazılar</Link>
-                <Link href="/contact">İletişim</Link>
+              <nav className={styles.linkColumn} aria-label={t.navAria}>
+                <p className={styles.columnTitle}>{t.site}</p>
+                <Link href="/about">{t.about}</Link>
+                <Link href="/blog">{t.posts}</Link>
+                <Link href="/contact">{t.contact}</Link>
               </nav>
 
               <div className={styles.linkColumn}>
-                <p className={styles.columnTitle}>Bülten</p>
+                <p className={styles.columnTitle}>{t.newsletter}</p>
                 <p className={styles.newsText}>
-                  Yeni yazılar yayınlandığında e-posta ile haberdar olun.
+                  {t.newsletterText}
                 </p>
                 <form
                   className={styles.subscribeRow}
@@ -51,24 +82,24 @@ export default async function SiteFooter() {
                   method="get"
                 >
                   <input
-                    aria-label="E-posta adresi"
+                    aria-label={t.emailAria}
                     className={styles.input}
                     name="email"
                     type="email"
-                    placeholder="E-posta adresiniz"
+                    placeholder={t.emailPlaceholder}
                     required
                   />
                   <button className={styles.button} type="submit">
-                    Abone Ol
+                    {t.subscribe}
                   </button>
                 </form>
               </div>
             </div>
 
             <div className={styles.bottom}>
-              <p>© {currentYear} {adminFullName}. Tüm hakları saklıdır.</p>
+              <p>© {currentYear} {adminFullName}. {t.rights}</p>
               <div className={styles.legalLinks}>
-                <Link href="/privacy">Gizlilik</Link>
+                <Link href="/privacy">{t.privacy}</Link>
                 {linkedinUrl ? (
                   <a href={linkedinUrl} target="_blank" rel="noreferrer">
                     LinkedIn

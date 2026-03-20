@@ -2,7 +2,7 @@
 
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { toast } from "sonner";
 import styles from "./page.module.css";
 import Link from "next/link";
@@ -16,6 +16,40 @@ function LoginContent() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [locale, setLocale] = useState<"tr" | "en">("tr");
+
+  useEffect(() => {
+    const htmlLang = document.documentElement.lang;
+    setLocale(htmlLang === "en" ? "en" : "tr");
+  }, []);
+
+  const t = locale === "en"
+    ? {
+      waitMinutes: "minutes",
+      waitAWhile: "a while",
+      tooMany: "Too many attempts. Please try again in {waitText}.",
+      failed: "Login failed. Please check your credentials.",
+      success: "Login successful.",
+      backHome: "Back to home",
+      title: "Admin Login",
+      email: "Email",
+      password: "Password",
+      loggingIn: "Signing in...",
+      login: "Sign in",
+    }
+    : {
+      waitMinutes: "dakika",
+      waitAWhile: "bir süre",
+      tooMany: "Çok fazla deneme yapıldı. {waitText} sonra tekrar deneyin.",
+      failed: "Giriş başarısız. Bilgileri kontrol edin.",
+      success: "Giriş başarılı.",
+      backHome: "Anasayfaya dön",
+      title: "Admin Girişi",
+      email: "E-posta",
+      password: "Parola",
+      loggingIn: "Giriş yapılıyor...",
+      login: "Giriş yap",
+    };
 
   const onSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -35,19 +69,19 @@ function LoginContent() {
       if (result.error.startsWith("RATE_LIMIT:")) {
         const [, minutesRaw] = result.error.split(":");
         const minutes = Number(minutesRaw);
-        const waitText = Number.isFinite(minutes) ? `${minutes} dakika` : "bir süre";
-        const message = `Çok fazla deneme yapıldı. ${waitText} sonra tekrar deneyin.`;
+        const waitText = Number.isFinite(minutes) ? `${minutes} ${t.waitMinutes}` : t.waitAWhile;
+        const message = t.tooMany.replace("{waitText}", waitText);
         setError(message);
         toast.error(message);
         return;
       }
-      const message = "Giriş başarısız. Bilgileri kontrol edin.";
+      const message = t.failed;
       setError(message);
       toast.error(message);
       return;
     }
 
-    toast.success("Giriş başarılı.");
+    toast.success(t.success);
     router.replace(callbackUrl);
   };
 
@@ -55,12 +89,12 @@ function LoginContent() {
     <main className={styles.page}>
       <section className={styles.card}>
         <Link href="/" className={styles.backLink}>
-          ← Anasayfaya dön
+          ← {t.backHome}
         </Link>
-        <h1 className={styles.title}>Admin Girişi</h1>
+        <h1 className={styles.title}>{t.title}</h1>
         <form onSubmit={onSubmit} className={styles.form}>
           <label className={styles.field}>
-            <span>E-posta</span>
+            <span>{t.email}</span>
             <input
               type="email"
               required
@@ -70,7 +104,7 @@ function LoginContent() {
             />
           </label>
           <label className={styles.field}>
-            <span>Parola</span>
+            <span>{t.password}</span>
             <input
               type="password"
               required
@@ -81,7 +115,7 @@ function LoginContent() {
           </label>
           {error ? <p className={styles.error}>{error}</p> : null}
           <button type="submit" disabled={isSubmitting} className={styles.button}>
-            {isSubmitting ? "Giriş yapılıyor..." : "Giriş yap"}
+            {isSubmitting ? t.loggingIn : t.login}
           </button>
         </form>
       </section>

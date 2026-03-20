@@ -2,15 +2,48 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { formatDate } from "@/lib/format";
 import { formatReadingTime } from "@/lib/readingTime";
+import { getServerLocale } from "@/lib/i18n";
 import styles from "./page.module.css";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = {
-  title: "Yazılar",
-  description: "Yayınlanan blog yazıları ve notlar.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getServerLocale();
+  return locale === "en"
+    ? { title: "Posts", description: "Published blog posts and notes." }
+    : { title: "Yazılar", description: "Yayınlanan blog yazıları ve notlar." };
+}
 
 const PAGE_SIZE = 9;
+const copy = {
+  tr: {
+    title: "Yazılar",
+    subtitle: "Teknik notlar, proje günlükleri ve düzenli güncellediğim kısa paylaşımlar.",
+    viewAria: "Görünüm seçimi",
+    list: "Liste",
+    grid: "Grid",
+    emptyTitle: "Henüz yayınlanmış bir yazı yok.",
+    emptyText: "Yakında burada ilk yazılar görünecek.",
+    tagsPrefix: "Etiketler:",
+    readMore: "Yazıyı oku",
+    paginationAria: "Blog sayfalama",
+    previous: "Önceki",
+    next: "Sonraki",
+  },
+  en: {
+    title: "Posts",
+    subtitle: "Technical notes, project logs, and concise updates I publish regularly.",
+    viewAria: "View selection",
+    list: "List",
+    grid: "Grid",
+    emptyTitle: "No published post yet.",
+    emptyText: "The first posts will appear here soon.",
+    tagsPrefix: "Tags:",
+    readMore: "Read post",
+    paginationAria: "Blog pagination",
+    previous: "Previous",
+    next: "Next",
+  },
+} as const;
 
 function parsePage(value: string | string[] | undefined) {
   const raw = Array.isArray(value) ? value[0] : value;
@@ -43,6 +76,8 @@ export default async function BlogPage({
 }: {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  const locale = await getServerLocale();
+  const t = copy[locale];
   const resolvedSearchParams = (await searchParams) ?? {};
   const requestedPage = parsePage(resolvedSearchParams.page);
   const view = parseView(resolvedSearchParams.view);
@@ -70,32 +105,29 @@ export default async function BlogPage({
       <div className="container">
         <header className={styles.header}>
           <div>
-            <h1>Yazılar</h1>
-            <p>
-              Teknik notlar, proje günlükleri ve düzenli güncellediğim kısa
-              paylaşımlar.
-            </p>
+            <h1>{t.title}</h1>
+            <p>{t.subtitle}</p>
           </div>
-          <div className={styles.viewSwitch} aria-label="Gorunum secimi">
+          <div className={styles.viewSwitch} aria-label={t.viewAria}>
             <Link
               href={buildBlogUrl(currentPage, "list")}
               className={`${styles.viewButton} ${view === "list" ? styles.viewButtonActive : ""}`}
             >
-              Liste
+              {t.list}
             </Link>
             <Link
               href={buildBlogUrl(currentPage, "grid")}
               className={`${styles.viewButton} ${view === "grid" ? styles.viewButtonActive : ""}`}
             >
-              Grid
+              {t.grid}
             </Link>
           </div>
         </header>
 
         {posts.length === 0 ? (
           <div className={styles.empty}>
-            <p>Henüz yayınlanmış bir yazı yok.</p>
-            <p>Yakında burada ilk yazılar görünecek.</p>
+            <p>{t.emptyTitle}</p>
+            <p>{t.emptyText}</p>
           </div>
         ) : (
           <>
@@ -113,7 +145,7 @@ export default async function BlogPage({
                   className={`${styles.item} ${view === "grid" ? styles.itemGrid : ""}`}
                 >
                   <div className={styles.meta}>
-                    <span>{formatDate(post.publishedAt ?? post.createdAt)}</span>
+                    <span>{formatDate(post.publishedAt ?? post.createdAt, false, locale)}</span>
                     {categoryNames ? <span>{categoryNames}</span> : null}
                     {readingTime ? <span>{readingTime}</span> : null}
                   </div>
@@ -122,10 +154,10 @@ export default async function BlogPage({
                     <p className={styles.excerpt}>{post.excerpt}</p>
                   ) : null}
                   {tagNames ? (
-                    <p className={styles.tags}>Etiketler: {tagNames}</p>
+                    <p className={styles.tags}>{t.tagsPrefix} {tagNames}</p>
                   ) : null}
                   <Link className={styles.link} href={`/blog/${post.slug}`}>
-                    Yazıyı oku
+                    {t.readMore}
                   </Link>
                 </article>
               );
@@ -133,14 +165,14 @@ export default async function BlogPage({
             </div>
 
             {totalPages > 1 ? (
-              <nav className={styles.pagination} aria-label="Blog sayfalama">
+              <nav className={styles.pagination} aria-label={t.paginationAria}>
                 <Link
                   href={buildBlogUrl(Math.max(1, currentPage - 1), view)}
                   className={`${styles.pageLink} ${currentPage === 1 ? styles.pageDisabled : ""}`}
                   aria-disabled={currentPage === 1}
                   tabIndex={currentPage === 1 ? -1 : undefined}
                 >
-                  Önceki
+                  {t.previous}
                 </Link>
 
                 <div className={styles.pageNumbers}>
@@ -165,7 +197,7 @@ export default async function BlogPage({
                   aria-disabled={currentPage === totalPages}
                   tabIndex={currentPage === totalPages ? -1 : undefined}
                 >
-                  Sonraki
+                  {t.next}
                 </Link>
               </nav>
             ) : null}

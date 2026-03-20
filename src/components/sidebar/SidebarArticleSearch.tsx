@@ -5,7 +5,22 @@ import { useRouter } from "next/navigation";
 import { useHomeSearch } from "@/components/blog/HomeSearchProvider";
 import styles from "./SidebarArticleSearch.module.css";
 
-export default function SidebarArticleSearch() {
+export default function SidebarArticleSearch({ locale = "tr" }: { locale?: "tr" | "en" }) {
+  const t = locale === "en"
+    ? {
+      heading: "Search Posts",
+      placeholder: "Title or category...",
+      clear: "Clear",
+      suggestionsAria: "Search suggestions",
+      noSuggestions: "No suggestions found.",
+    }
+    : {
+      heading: "Yazı Ara",
+      placeholder: "Başlık veya kategori...",
+      clear: "Temizle",
+      suggestionsAria: "Arama önerileri",
+      noSuggestions: "Öneri bulunamadı.",
+    };
   const rootRef = useRef<HTMLDivElement | null>(null);
   const router = useRouter();
   const { query, setQuery, suggestions, clearQuery, hasQuery } = useHomeSearch();
@@ -38,7 +53,7 @@ export default function SidebarArticleSearch() {
 
   return (
     <div ref={rootRef} className={styles.section}>
-      <h4 className={styles.heading}>Yazı Ara</h4>
+      <h4 className={styles.heading}>{t.heading}</h4>
 
       <div className={styles.searchFieldWrap}>
         <input
@@ -58,7 +73,7 @@ export default function SidebarArticleSearch() {
               navigateToPost(suggestions[0].slug);
             }
           }}
-          placeholder="Başlık veya kategori..."
+          placeholder={t.placeholder}
           className={styles.searchInput}
         />
         {hasQuery ? (
@@ -70,13 +85,13 @@ export default function SidebarArticleSearch() {
               setIsDropdownOpen(false);
             }}
           >
-            Temizle
+            {t.clear}
           </button>
         ) : null}
       </div>
 
       {showDropdown ? (
-        <div className={styles.dropdown} role="listbox" aria-label="Arama önerileri">
+        <div className={styles.dropdown} role="listbox" aria-label={t.suggestionsAria}>
           {suggestions.length > 0 ? (
             suggestions.map((item) => (
               <button
@@ -92,7 +107,7 @@ export default function SidebarArticleSearch() {
               </button>
             ))
           ) : (
-            <p className={styles.dropdownEmpty}>Öneri bulunamadı.</p>
+            <p className={styles.dropdownEmpty}>{t.noSuggestions}</p>
           )}
         </div>
       ) : null}
