@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getSiteUrl } from "@/lib/seo";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = getSiteUrl();
+  const baseUrl = await getSiteUrl();
   const posts = await prisma.post.findMany({
     where: { status: "PUBLISHED" },
     select: { slug: true, updatedAt: true },

@@ -1,55 +1,34 @@
-const DEFAULT_SITE_NAME = "Kişisel Blog";
-const DEFAULT_SITE_DESCRIPTION = "Yazılar, notlar ve kişisel çalışmalar için sade bir blog.";
-const DEFAULT_ADMIN_EMAIL = "hello@berkansozer.com";
-const DEFAULT_ADMIN_FULL_NAME = "Berkan Sozer";
+import { getResolvedSiteSettings } from "@/lib/siteSettings";
 
-export function getSiteName() {
-  const rawName =
-    process.env.NEXT_PUBLIC_SITE_NAME ||
-    process.env.SITE_NAME ||
-    DEFAULT_SITE_NAME;
-
-  const normalizedName = rawName.trim();
-  return normalizedName.length > 0 ? normalizedName : DEFAULT_SITE_NAME;
+export async function getSiteName() {
+  const settings = await getResolvedSiteSettings();
+  return settings.siteName;
 }
 
-export function getSiteDescription() {
-  const rawDescription =
-    process.env.NEXT_PUBLIC_SITE_DESCRIPTION ||
-    process.env.SITE_DESCRIPTION ||
-    DEFAULT_SITE_DESCRIPTION;
-
-  const normalizedDescription = rawDescription.trim();
-  return normalizedDescription.length > 0
-    ? normalizedDescription
-    : DEFAULT_SITE_DESCRIPTION;
+export async function getSiteDescription() {
+  const settings = await getResolvedSiteSettings();
+  return settings.siteDescription;
 }
 
-export function getSiteUrl() {
-  const envUrl =
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    process.env.SITE_URL ||
-    process.env.NEXTAUTH_URL ||
-    "http://localhost:3007";
+export async function getSiteUrl() {
+  const settings = await getResolvedSiteSettings();
 
   try {
-    return new URL(envUrl);
+    return new URL(settings.siteUrl);
   } catch {
     return new URL("http://localhost:3007");
   }
 }
 
-export function getAdminEmail() {
-  const rawEmail = process.env.ADMIN_EMAIL || DEFAULT_ADMIN_EMAIL;
-  const normalizedEmail = rawEmail.trim().toLowerCase();
-  return normalizedEmail.length > 0 ? normalizedEmail : DEFAULT_ADMIN_EMAIL;
+export async function getAdminEmail() {
+  const settings = await getResolvedSiteSettings();
+  return settings.adminEmail;
 }
 
-export function getAdminFullName() {
-  const firstName = (process.env.ADMIN_FIRST_NAME ?? "").trim();
-  const lastName = (process.env.ADMIN_LAST_NAME ?? "").trim();
-  const fullName = `${firstName} ${lastName}`.trim();
-  return fullName.length > 0 ? fullName : DEFAULT_ADMIN_FULL_NAME;
+export async function getAdminFullName() {
+  const settings = await getResolvedSiteSettings();
+  const fullName = `${settings.adminFirstName} ${settings.adminLastName}`.trim();
+  return fullName.length > 0 ? fullName : "Admin User";
 }
 
 function normalizeOptionalUrl(value: string | undefined): string | null {

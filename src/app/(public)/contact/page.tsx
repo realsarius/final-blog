@@ -28,8 +28,8 @@ const FAQ_ITEMS = [
   },
 ];
 
-export default function ContactPage() {
-  const adminEmail = getAdminEmail();
+export default async function ContactPage() {
+  const adminEmail = await getAdminEmail();
   const linkedinUrl = getLinkedinUrl();
   const githubUrl = getGithubUrl();
 

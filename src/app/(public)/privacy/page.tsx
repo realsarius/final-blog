@@ -7,8 +7,8 @@ export const metadata: Metadata = {
   description: "Kişisel verilerin bu sitede nasıl ele alındığına dair özet bilgi.",
 };
 
-export default function PrivacyPage() {
-  const adminEmail = getAdminEmail();
+export default async function PrivacyPage() {
+  const adminEmail = await getAdminEmail();
 
   return (
     <div className={styles.page}>
