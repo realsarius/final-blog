@@ -1,0 +1,162 @@
+Enum Role {
+  ADMIN
+  EDITOR
+  AUTHOR
+}
+
+Enum PostStatus {
+  DRAFT
+  PUBLISHED
+}
+
+Enum TransitionDirection {
+  LEFT
+  RIGHT
+  UP
+  DOWN
+}
+
+Table User {
+  id varchar [pk]
+  firstName varchar [not null]
+  lastName varchar [not null]
+  email varchar [not null, unique]
+  username varchar [unique]
+  passwordHash varchar [not null]
+  role Role [not null, default: 'ADMIN']
+  isActive boolean [not null, default: true]
+  tokenVersion int [not null, default: 0]
+  bio text
+  avatarUrl varchar
+  avatarFocusX int [not null, default: 50]
+  avatarFocusY int [not null, default: 50]
+  createdAt timestamp [not null, default: `now()`]
+  updatedAt timestamp [not null]
+}
+
+Table Post {
+  id varchar [pk]
+  title varchar [not null]
+  slug varchar [not null, unique]
+  excerpt text
+  content text [not null]
+  coverImageUrl varchar
+  status PostStatus [not null, default: 'DRAFT']
+  publishedAt timestamp
+  featured boolean [not null, default: false]
+  readingTime int
+  metaTitle varchar
+  metaDescription text
+  ogImageUrl varchar
+  canonicalUrl varchar
+  authorId varchar [not null]
+  createdAt timestamp [not null, default: `now()`]
+  updatedAt timestamp [not null]
+
+  indexes {
+    (status, publishedAt)
+    (featured, publishedAt)
+    authorId
+  }
+}
+
+Table HeroSlide {
+  id varchar [pk]
+  imageUrl varchar [not null]
+  titleColorLeft varchar
+  titleColorRight varchar
+  sortOrder int [not null, default: 0]
+  isActive boolean [not null, default: true]
+  postId varchar
+  createdAt timestamp [not null, default: `now()`]
+  updatedAt timestamp [not null]
+
+  indexes {
+    (isActive, sortOrder)
+    postId
+  }
+}
+
+Table HeroConfig {
+  id varchar [pk, default: 'default']
+  autoplaySeconds int [not null, default: 10]
+  transitionDirection TransitionDirection [not null, default: 'LEFT']
+  createdAt timestamp [not null, default: `now()`]
+  updatedAt timestamp [not null]
+}
+
+Table Category {
+  id varchar [pk]
+  name varchar [not null, unique]
+  slug varchar [not null, unique]
+  description text
+  parentId varchar
+  createdAt timestamp [not null, default: `now()`]
+  updatedAt timestamp [not null]
+}
+
+Table Tag {
+  id varchar [pk]
+  name varchar [not null, unique]
+  slug varchar [not null, unique]
+  createdAt timestamp [not null, default: `now()`]
+  updatedAt timestamp [not null]
+}
+
+Table PostCategory {
+  postId varchar [not null]
+  categoryId varchar [not null]
+
+  indexes {
+    (postId, categoryId) [pk]
+  }
+}
+
+Table PostTag {
+  postId varchar [not null]
+  tagId varchar [not null]
+
+  indexes {
+    (postId, tagId) [pk]
+  }
+}
+
+Table PostView {
+  id varchar [pk]
+  postId varchar [not null]
+  viewedAt timestamp [not null, default: `now()`]
+
+  indexes {
+    postId
+  }
+}
+
+Table SiteSettings {
+  id varchar [pk, default: 'default']
+  siteName varchar
+  siteDescription text
+  siteUrl varchar
+  adminEmail varchar
+  adminFirstName varchar
+  adminLastName varchar
+  timezone varchar
+  dateFormat varchar
+  timeFormat varchar
+  weekStartsOn varchar
+  language varchar
+  aboutContentTr text
+  aboutContentEn text
+  createdAt timestamp [not null, default: `now()`]
+  updatedAt timestamp [not null]
+
+  Note: 'Singleton ayar tablosu. Beklenen tek kayit id=default.'
+}
+
+Ref: Post.authorId > User.id
+Ref: HeroSlide.postId > Post.id [delete: set null]
+Ref: Category.parentId > Category.id
+Ref: PostCategory.postId > Post.id
+Ref: PostCategory.categoryId > Category.id
+Ref: PostTag.postId > Post.id
+Ref: PostTag.tagId > Tag.id
+Ref: PostView.postId > Post.id
