@@ -1,9 +1,11 @@
+import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/slug";
 import { requireAdminSession } from "@/lib/adminAuth";
+import { getMessages, getServerLocale } from "@/lib/i18n";
 import { getFirstErrorMessage, nameSchema } from "@/lib/validation";
 import ConfirmDeleteForm from "@/components/admin/ConfirmDeleteForm";
 import styles from "./page.module.css";
@@ -106,6 +108,9 @@ export default async function TagsPage({
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
   await requireAdminSession("/admin/tags");
+  const locale = await getServerLocale();
+  const messages = await getMessages(locale);
+  const m = messages.admin.tags;
   const resolvedSearchParams = (await searchParams) ?? {};
   const error =
     typeof resolvedSearchParams.error === "string"
@@ -120,21 +125,21 @@ export default async function TagsPage({
     <div className={styles.page}>
       <header className={styles.header}>
         <div>
-          <h1>Etiketler</h1>
-          <p>Yazıları detaylandırmak için etiketleri buradan yönetebilirsin.</p>
+          <h1>{m.title}</h1>
+          <p>{m.subtitle}</p>
         </div>
       </header>
 
       {error ? <p className={styles.error}>{error}</p> : null}
 
       <form className={styles.form} action={addTag}>
-        <input name="name" placeholder="Yeni etiket" />
-        <button type="submit">Ekle</button>
+        <input name="name" placeholder={m.newPlaceholder} />
+        <button type="submit">{m.add}</button>
       </form>
 
       {tags.length === 0 ? (
         <div className={styles.empty}>
-          <p>Henüz etiket eklenmemiş.</p>
+          <p>{m.empty}</p>
         </div>
       ) : (
         <div className={styles.table}>
@@ -143,14 +148,24 @@ export default async function TagsPage({
               <form className={styles.editForm} action={updateTag}>
                 <input type="hidden" name="id" value={tag.id} />
                 <input name="name" defaultValue={tag.name} />
-                <button type="submit">Kaydet</button>
+                <button type="submit">{m.save}</button>
               </form>
-              <span className={styles.meta}>{tag._count.posts} yazı</span>
+              {tag._count.posts > 0 ? (
+                <Link
+                  className={styles.metaLink}
+                  href={`/admin/posts?date=all&tag=${encodeURIComponent(tag.id)}`}
+                >
+                  {tag._count.posts} {m.postsCountSuffix}
+                </Link>
+              ) : (
+                <span className={styles.meta}>0 {m.postsCountSuffix}</span>
+              )}
               <ConfirmDeleteForm
                 action={deleteTag}
                 idValue={tag.id}
                 className={styles.danger}
-                confirmMessage="Bu etiketi silmek istediğine emin misin?"
+                confirmMessage={m.confirmDelete}
+                buttonLabel={m.delete}
               />
             </div>
           ))}

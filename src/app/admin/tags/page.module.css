@@ -105,6 +105,16 @@
   color: var(--muted);
 }
 
+.metaLink {
+  font-size: 12px;
+  color: var(--accent-dark);
+  border-bottom: 1px solid transparent;
+}
+
+.metaLink:hover {
+  border-bottom-color: var(--accent-dark);
+}
+
 .danger {
   font-size: 13px;
   border: 1px solid var(--line);
