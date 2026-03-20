@@ -7,6 +7,7 @@ import {
   getLinkedinUrl,
 } from "@/lib/seo";
 import { getServerLocale } from "@/lib/i18n";
+import ContactForm from "./ContactForm";
 import styles from "./page.module.css";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -43,7 +44,10 @@ export default async function ContactPage() {
       message: "Message",
       messagePlaceholder: "A few sentences about your project or need...",
       send: "Send",
-      formHint: "The form opens your default email client. You can also send a direct email.",
+      sending: "Sending...",
+      formHint: "Your message will be delivered directly to inbox via secure email service.",
+      success: "Message sent successfully. Thank you.",
+      error: "Message could not be sent right now. Please try again.",
       faqTitle: "FAQ",
       faq: [
         {
@@ -86,7 +90,10 @@ export default async function ContactPage() {
       message: "Mesaj",
       messagePlaceholder: "Proje veya ihtiyacın hakkında birkaç cümle...",
       send: "Gönder",
-      formHint: "Form, varsayılan e-posta istemcini açar. İstersen doğrudan e-posta da atabilirsin.",
+      sending: "Gönderiliyor...",
+      formHint: "Mesajın güvenli e-posta servisi ile doğrudan gelen kutuma iletilir.",
+      success: "Mesajın başarıyla gönderildi. Teşekkür ederim.",
+      error: "Mesaj şu anda gönderilemedi. Lütfen tekrar dene.",
       faqTitle: "Sık sorulanlar",
       faq: [
         {
@@ -157,54 +164,7 @@ export default async function ContactPage() {
             </div>
           </div>
 
-          <div className={styles.formWrap}>
-            <form
-              className={styles.form}
-              action={`mailto:${adminEmail}`}
-              method="post"
-              encType="text/plain"
-            >
-              <div className={styles.row}>
-                <label>
-                  {t.firstName}
-                  <input name="firstName" required />
-                </label>
-                <label>
-                  {t.lastName}
-                  <input name="lastName" required />
-                </label>
-              </div>
-
-              <label>
-                {t.email}
-                <input name="email" type="email" required />
-              </label>
-
-              <label>
-                {t.topic}
-                <select name="topic" defaultValue="">
-                  <option value="" disabled>{t.topicSelect}</option>
-                  <option value="isbirligi">{t.topicCollab}</option>
-                  <option value="danismanlik">{t.topicConsult}</option>
-                  <option value="mentorluk">{t.topicMentor}</option>
-                  <option value="diger">{t.topicOther}</option>
-                </select>
-              </label>
-
-              <label>
-                {t.message}
-                <textarea
-                  name="message"
-                  rows={6}
-                  placeholder={t.messagePlaceholder}
-                  required
-                />
-              </label>
-
-              <button type="submit">{t.send}</button>
-            </form>
-            <p className={styles.formHint}>{t.formHint}</p>
-          </div>
+          <ContactForm messages={t} />
         </section>
 
         <section className={styles.faqSection}>
