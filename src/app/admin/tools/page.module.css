@@ -1,0 +1,93 @@
+.page {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.header {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.header h1 {
+  font-size: 40px;
+  font-weight: 500;
+}
+
+.header p {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-3);
+}
+
+.stats div {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: var(--space-4);
+  display: grid;
+  gap: var(--space-1);
+}
+
+.stats span {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.stats strong {
+  font-size: 24px;
+  color: var(--text);
+}
+
+.section {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.sectionHeader h2 {
+  font-size: 21px;
+  font-weight: 500;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--space-3);
+}
+
+.card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  padding: var(--space-4);
+  display: grid;
+  gap: var(--space-2);
+}
+
+.card h3 {
+  font-size: 18px;
+}
+
+.card p {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.cardLink {
+  justify-self: flex-start;
+  border: 1px solid var(--accent-dark);
+  color: var(--accent-dark);
+  background: color-mix(in srgb, var(--surface) 90%, var(--accent) 10%);
+  border-radius: var(--radius-sm);
+  padding: 7px 11px;
+  font-size: 14px;
+}
+
+.cardLink:hover {
+  background: color-mix(in srgb, var(--surface) 82%, var(--accent) 18%);
+}
