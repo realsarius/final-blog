@@ -9,12 +9,12 @@ import {
 } from "@/lib/seo";
 import styles from "./SiteFooter.module.css";
 
-export default function SiteFooter() {
+export default async function SiteFooter() {
   const currentYear = new Date().getFullYear();
-  const siteName = getSiteName();
-  const siteDescription = getSiteDescription();
-  const adminEmail = getAdminEmail();
-  const adminFullName = getAdminFullName();
+  const siteName = await getSiteName();
+  const siteDescription = await getSiteDescription();
+  const adminEmail = await getAdminEmail();
+  const adminFullName = await getAdminFullName();
   const linkedinUrl = getLinkedinUrl();
   const githubUrl = getGithubUrl();
 

@@ -16,37 +16,42 @@ const playfairDisplay = Playfair_Display({
   style: ["normal", "italic"],
 });
 
-const siteName = getSiteName();
-const siteDescription = getSiteDescription();
+export async function generateMetadata(): Promise<Metadata> {
+  const [siteName, siteDescription, siteUrl] = await Promise.all([
+    getSiteName(),
+    getSiteDescription(),
+    getSiteUrl(),
+  ]);
 
-export const metadata: Metadata = {
-  title: {
-    default: siteName,
-    template: `%s - ${siteName}`,
-  },
-  description: siteDescription,
-  metadataBase: getSiteUrl(),
-  applicationName: siteName,
-  icons: {
-    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
-    shortcut: [{ url: "/icon.svg", type: "image/svg+xml" }],
-    apple: [{ url: "/icon.svg", type: "image/svg+xml" }],
-  },
-  alternates: {
-    canonical: "/",
-  },
-  openGraph: {
-    title: siteName,
+  return {
+    title: {
+      default: siteName,
+      template: `%s - ${siteName}`,
+    },
     description: siteDescription,
-    siteName,
-    type: "website",
-  },
-  twitter: {
-    card: "summary",
-    title: siteName,
-    description: siteDescription,
-  },
-};
+    metadataBase: siteUrl,
+    applicationName: siteName,
+    icons: {
+      icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
+      shortcut: [{ url: "/icon.svg", type: "image/svg+xml" }],
+      apple: [{ url: "/icon.svg", type: "image/svg+xml" }],
+    },
+    alternates: {
+      canonical: "/",
+    },
+    openGraph: {
+      title: siteName,
+      description: siteDescription,
+      siteName,
+      type: "website",
+    },
+    twitter: {
+      card: "summary",
+      title: siteName,
+      description: siteDescription,
+    },
+  };
+}
 
 export default function RootLayout({
   children,

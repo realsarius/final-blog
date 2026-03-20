@@ -1,0 +1,21 @@
+.switcher {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.link {
+  color: var(--muted);
+  border-bottom: 1px solid transparent;
+}
+
+.link:hover {
+  border-bottom-color: var(--accent-dark);
+  color: var(--accent-dark);
+}
+
+.active {
+  color: var(--accent-dark);
+  font-weight: 700;
+}
