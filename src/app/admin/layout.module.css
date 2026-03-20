@@ -21,35 +21,6 @@
   color: var(--muted);
 }
 
-.navGroup {
-  display: grid;
-  gap: var(--space-2);
-}
-
-.navGroupTitle {
-  font-size: 20px;
-  font-weight: 700;
-  font-family: var(--font-serif);
-}
-
-.nav {
-  display: grid;
-  gap: var(--space-1);
-}
-
-.navLink {
-  font-size: 14px;
-  color: var(--muted);
-  padding: 7px 0;
-  border-bottom: 1px solid transparent;
-  transition: color 160ms ease, border-color 160ms ease;
-}
-
-.navLink:hover {
-  color: var(--accent-dark);
-  border-bottom-color: var(--accent-dark);
-}
-
 .sidebarFooter {
   margin-top: auto;
   padding-top: var(--space-4);
@@ -103,6 +74,12 @@
   cursor: pointer;
   font: inherit;
   border-bottom: 1px solid transparent;
+}
+
+.topbarActions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
 }
 
 .signOut:hover {
