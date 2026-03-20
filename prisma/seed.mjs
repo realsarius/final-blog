@@ -16,6 +16,14 @@ const requiredEnv = [
   "ADMIN_EMAIL",
   "ADMIN_PASSWORD",
 ];
+const DEFAULT_SITE_NAME = "Kişisel Blog";
+const DEFAULT_SITE_DESCRIPTION = "Yazılar, notlar ve kişisel çalışmalar için sade bir blog.";
+const DEFAULT_SITE_URL = "http://localhost:3007";
+const DEFAULT_TIMEZONE = "Europe/Istanbul";
+const DEFAULT_DATE_FORMAT = "dd.MM.yyyy";
+const DEFAULT_TIME_FORMAT = "HH:mm";
+const DEFAULT_WEEK_STARTS_ON = "Monday";
+const DEFAULT_LANGUAGE = "tr";
 
 function slugify(value) {
   return value
@@ -32,6 +40,22 @@ function slugify(value) {
 function computeReadingTime(content) {
   const wordCount = content.trim().split(/\s+/).filter(Boolean).length;
   return Math.max(1, Math.ceil(wordCount / 220));
+}
+
+function normalizeNonEmpty(value, fallback) {
+  const normalized = (value ?? "").trim();
+  return normalized.length > 0 ? normalized : fallback;
+}
+
+function normalizeSiteUrl(value) {
+  const raw = normalizeNonEmpty(value, DEFAULT_SITE_URL);
+  const withProtocol = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+
+  try {
+    return new URL(withProtocol).toString();
+  } catch {
+    return DEFAULT_SITE_URL;
+  }
 }
 
 function assertEnv() {
@@ -85,6 +109,54 @@ async function main() {
       console.log("Admin user exists. Profile synced from env.");
     } else {
       console.log("Admin user already exists and is up to date.");
+    }
+  }
+
+  const siteSettingsCandidate = {
+    siteName: normalizeNonEmpty(process.env.NEXT_PUBLIC_SITE_NAME || process.env.SITE_NAME, DEFAULT_SITE_NAME),
+    siteDescription: normalizeNonEmpty(
+      process.env.NEXT_PUBLIC_SITE_DESCRIPTION || process.env.SITE_DESCRIPTION,
+      DEFAULT_SITE_DESCRIPTION,
+    ),
+    siteUrl: normalizeSiteUrl(process.env.NEXT_PUBLIC_SITE_URL || process.env.SITE_URL || process.env.NEXTAUTH_URL),
+    adminEmail: email,
+    adminFirstName: normalizeNonEmpty(process.env.ADMIN_FIRST_NAME, "Admin"),
+    adminLastName: normalizeNonEmpty(process.env.ADMIN_LAST_NAME, "User"),
+    timezone: normalizeNonEmpty(process.env.SITE_TIMEZONE, DEFAULT_TIMEZONE),
+    dateFormat: normalizeNonEmpty(process.env.SITE_DATE_FORMAT, DEFAULT_DATE_FORMAT),
+    timeFormat: normalizeNonEmpty(process.env.SITE_TIME_FORMAT, DEFAULT_TIME_FORMAT),
+    weekStartsOn: normalizeNonEmpty(process.env.SITE_WEEK_STARTS_ON, DEFAULT_WEEK_STARTS_ON),
+    language: normalizeNonEmpty(process.env.SITE_LANGUAGE, DEFAULT_LANGUAGE),
+  };
+
+  const existingSiteSettings = await prisma.siteSettings.findUnique({
+    where: { id: "default" },
+  });
+
+  if (!existingSiteSettings) {
+    await prisma.siteSettings.create({
+      data: {
+        id: "default",
+        ...siteSettingsCandidate,
+      },
+    });
+    console.log("Site settings created from initial env values.");
+  } else {
+    const patch = {};
+    for (const [key, value] of Object.entries(siteSettingsCandidate)) {
+      const current = existingSiteSettings[key];
+      if (current === null || (typeof current === "string" && current.trim().length === 0)) {
+        patch[key] = value;
+      }
+    }
+    if (Object.keys(patch).length > 0) {
+      await prisma.siteSettings.update({
+        where: { id: "default" },
+        data: patch,
+      });
+      console.log("Site settings existed. Missing fields were backfilled.");
+    } else {
+      console.log("Site settings already exist and are complete.");
     }
   }
 

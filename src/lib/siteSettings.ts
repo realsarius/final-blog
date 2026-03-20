@@ -3,8 +3,8 @@ import { cache } from "react";
 
 const DEFAULT_SITE_NAME = "Kişisel Blog";
 const DEFAULT_SITE_DESCRIPTION = "Yazılar, notlar ve kişisel çalışmalar için sade bir blog.";
-const DEFAULT_ADMIN_EMAIL = "hello@berkansozer.com";
-const DEFAULT_ADMIN_FULL_NAME = "Berkan Sozer";
+const DEFAULT_ADMIN_EMAIL = "admin@example.com";
+const DEFAULT_ADMIN_FULL_NAME = "Admin User";
 const DEFAULT_SITE_URL = "http://localhost:3007";
 
 export type ResolvedSiteSettings = {
@@ -44,29 +44,22 @@ function normalizeSiteUrl(value: string | null | undefined): string {
   }
 }
 
-function resolveEnvDefaults(): ResolvedSiteSettings {
-  const rawSiteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.SITE_URL || process.env.NEXTAUTH_URL || DEFAULT_SITE_URL;
-  const firstName = normalizeNonEmpty(process.env.ADMIN_FIRST_NAME, DEFAULT_ADMIN_FULL_NAME.split(" ")[0] ?? "Admin");
-  const lastName = normalizeNonEmpty(
-    process.env.ADMIN_LAST_NAME,
-    DEFAULT_ADMIN_FULL_NAME.split(" ").slice(1).join(" ") || "User",
-  );
+function resolveDbDefaults(): ResolvedSiteSettings {
+  const firstName = normalizeNonEmpty(DEFAULT_ADMIN_FULL_NAME.split(" ")[0], "Admin");
+  const lastName = normalizeNonEmpty(DEFAULT_ADMIN_FULL_NAME.split(" ").slice(1).join(" "), "User");
 
   return {
-    siteName: normalizeNonEmpty(process.env.NEXT_PUBLIC_SITE_NAME || process.env.SITE_NAME, DEFAULT_SITE_NAME),
-    siteDescription: normalizeNonEmpty(
-      process.env.NEXT_PUBLIC_SITE_DESCRIPTION || process.env.SITE_DESCRIPTION,
-      DEFAULT_SITE_DESCRIPTION,
-    ),
-    siteUrl: normalizeSiteUrl(rawSiteUrl),
-    adminEmail: normalizeNonEmpty(process.env.ADMIN_EMAIL, DEFAULT_ADMIN_EMAIL).toLowerCase(),
+    siteName: DEFAULT_SITE_NAME,
+    siteDescription: DEFAULT_SITE_DESCRIPTION,
+    siteUrl: normalizeSiteUrl(DEFAULT_SITE_URL),
+    adminEmail: DEFAULT_ADMIN_EMAIL.toLowerCase(),
     adminFirstName: firstName,
     adminLastName: lastName,
-    timezone: normalizeNonEmpty(process.env.SITE_TIMEZONE, "Europe/Istanbul"),
-    dateFormat: normalizeNonEmpty(process.env.SITE_DATE_FORMAT, "dd.MM.yyyy"),
-    timeFormat: normalizeNonEmpty(process.env.SITE_TIME_FORMAT, "HH:mm"),
-    weekStartsOn: normalizeNonEmpty(process.env.SITE_WEEK_STARTS_ON, "Monday"),
-    language: normalizeNonEmpty(process.env.SITE_LANGUAGE, "tr"),
+    timezone: "Europe/Istanbul",
+    dateFormat: "dd.MM.yyyy",
+    timeFormat: "HH:mm",
+    weekStartsOn: "Monday",
+    language: "tr",
   };
 }
 
@@ -83,7 +76,7 @@ function mergeWithDefaults(record: {
   weekStartsOn: string | null;
   language: string | null;
 } | null): ResolvedSiteSettings {
-  const defaults = resolveEnvDefaults();
+  const defaults = resolveDbDefaults();
   if (!record) {
     return defaults;
   }
@@ -104,6 +97,8 @@ function mergeWithDefaults(record: {
 }
 
 export const getResolvedSiteSettings = cache(async (): Promise<ResolvedSiteSettings> => {
+  const defaults = resolveDbDefaults();
+
   try {
     const record = await prisma.siteSettings.findUnique({
       where: { id: "default" },
@@ -121,9 +116,63 @@ export const getResolvedSiteSettings = cache(async (): Promise<ResolvedSiteSetti
         language: true,
       },
     });
-    return mergeWithDefaults(record);
+    if (record) {
+      return mergeWithDefaults(record);
+    }
+
+    try {
+      const created = await prisma.siteSettings.create({
+        data: {
+          id: "default",
+          siteName: defaults.siteName,
+          siteDescription: defaults.siteDescription,
+          siteUrl: defaults.siteUrl,
+          adminEmail: defaults.adminEmail,
+          adminFirstName: defaults.adminFirstName,
+          adminLastName: defaults.adminLastName,
+          timezone: defaults.timezone,
+          dateFormat: defaults.dateFormat,
+          timeFormat: defaults.timeFormat,
+          weekStartsOn: defaults.weekStartsOn,
+          language: defaults.language,
+        },
+        select: {
+          siteName: true,
+          siteDescription: true,
+          siteUrl: true,
+          adminEmail: true,
+          adminFirstName: true,
+          adminLastName: true,
+          timezone: true,
+          dateFormat: true,
+          timeFormat: true,
+          weekStartsOn: true,
+          language: true,
+        },
+      });
+      return mergeWithDefaults(created);
+    } catch {
+      // A parallel request might have created the default record just now.
+      const afterRace = await prisma.siteSettings.findUnique({
+        where: { id: "default" },
+        select: {
+          siteName: true,
+          siteDescription: true,
+          siteUrl: true,
+          adminEmail: true,
+          adminFirstName: true,
+          adminLastName: true,
+          timezone: true,
+          dateFormat: true,
+          timeFormat: true,
+          weekStartsOn: true,
+          language: true,
+        },
+      });
+      return mergeWithDefaults(afterRace);
+    }
   } catch {
-    return resolveEnvDefaults();
+    return defaults;
   }
 });
 
