@@ -6,6 +6,7 @@ import { requireAdminSession } from "@/lib/adminAuth";
 import { getMessages, getServerLocale } from "@/lib/i18n";
 import { getFirstErrorMessage, postSchema, splitCommaList } from "@/lib/validation";
 import { parsePostStatus, resolvePublishedAt } from "@/lib/postPublication";
+import { resolveCategoryIds, resolveTagIds } from "@/lib/postTaxonomy";
 import styles from "../post-form.module.css";
 import EditorField from "../EditorField";
 import TaxonomyPicker from "../TaxonomyPicker";
@@ -85,6 +86,10 @@ async function createPost(formData: FormData) {
 
   const baseSlug = slugify(slugInput || validation.data.title);
   const slug = await generateUniquePostSlug(baseSlug || (locale === "en" ? "post" : "yazi"));
+  const [categoryIds, tagIds] = await Promise.all([
+    resolveCategoryIds(validation.data.categories),
+    resolveTagIds(validation.data.tags),
+  ]);
 
   await prisma.post.create({
     data: {
@@ -97,22 +102,16 @@ async function createPost(formData: FormData) {
       publishedAt: resolvePublishedAt(status),
       authorId,
       categories: {
-        create: validation.data.categories.map((name) => ({
+        create: categoryIds.map((categoryId) => ({
           category: {
-            connectOrCreate: {
-              where: { slug: slugify(name) },
-              create: { name, slug: slugify(name) },
-            },
+            connect: { id: categoryId },
           },
         })),
       },
       tags: {
-        create: validation.data.tags.map((name) => ({
+        create: tagIds.map((tagId) => ({
           tag: {
-            connectOrCreate: {
-              where: { slug: slugify(name) },
-              create: { name, slug: slugify(name) },
-            },
+            connect: { id: tagId },
           },
         })),
       },

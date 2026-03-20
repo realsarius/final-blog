@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdminSession } from "@/lib/adminAuth";
 import { formatDate } from "@/lib/format";
 import { getMessages, getServerLocale } from "@/lib/i18n";
+import { interpolate } from "@/lib/interpolate";
 import ConfirmDeleteForm from "@/components/admin/ConfirmDeleteForm";
 import styles from "./page.module.css";
 
@@ -28,6 +29,7 @@ async function deletePost(formData: FormData) {
 
 type SortField = "title" | "date";
 type SortDirection = "asc" | "desc";
+const POSTS_PAGE_SIZE = 20;
 
 function normalizeParam(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
@@ -88,6 +90,9 @@ function resolveOrderBy(
 ): Prisma.PostOrderByWithRelationInput[] {
   if (sortField === "title" && sortDirection) {
     return [{ title: sortDirection }, { createdAt: "desc" }];
+  }
+  if (sortField === "date" && sortDirection) {
+    return [{ createdAt: sortDirection }];
   }
   return [{ createdAt: "desc" }];
 }
@@ -159,6 +164,37 @@ function buildSortHref(
   return query.length > 0 ? `/admin/posts?${query}` : "/admin/posts";
 }
 
+function buildPageHref(
+  targetPage: number,
+  activeSort: { sortField: SortField | null; sortDirection: SortDirection | null },
+  activeFilters: { q: string; category: string; tag: string; date: string },
+) {
+  const params = new URLSearchParams();
+
+  if (activeSort.sortField && activeSort.sortDirection) {
+    params.set("sort", activeSort.sortField);
+    params.set("dir", activeSort.sortDirection);
+  }
+  if (activeFilters.q) {
+    params.set("q", activeFilters.q);
+  }
+  if (activeFilters.category !== "all") {
+    params.set("category", activeFilters.category);
+  }
+  if (activeFilters.tag !== "all") {
+    params.set("tag", activeFilters.tag);
+  }
+  if (activeFilters.date !== "all") {
+    params.set("date", activeFilters.date);
+  }
+  if (targetPage > 1) {
+    params.set("page", String(targetPage));
+  }
+
+  const query = params.toString();
+  return query.length > 0 ? `/admin/posts?${query}` : "/admin/posts";
+}
+
 export default async function AdminPostsPage({
   searchParams,
 }: {
@@ -175,6 +211,10 @@ export default async function AdminPostsPage({
   const selectedCategory = normalizeParam(resolvedSearchParams.category) ?? "all";
   const selectedTag = normalizeParam(resolvedSearchParams.tag) ?? "all";
   const selectedDate = normalizeParam(resolvedSearchParams.date) ?? "all";
+  const requestedPageRaw = Number(normalizeParam(resolvedSearchParams.page));
+  const requestedPage = Number.isFinite(requestedPageRaw) && requestedPageRaw > 0
+    ? Math.floor(requestedPageRaw)
+    : 1;
   const monthRange = selectedDate !== "all" ? parseMonthRange(selectedDate) : null;
 
   const whereClauses: Prisma.PostWhereInput[] = [];
@@ -231,10 +271,17 @@ export default async function AdminPostsPage({
     ? { AND: whereClauses }
     : undefined;
 
+  const totalCount = await prisma.post.count({ where });
+  const totalPages = Math.max(1, Math.ceil(totalCount / POSTS_PAGE_SIZE));
+  const currentPage = Math.min(requestedPage, totalPages);
+  const skip = (currentPage - 1) * POSTS_PAGE_SIZE;
+
   const [posts, categories, tags, allPostDates] = await Promise.all([
     prisma.post.findMany({
       where,
       orderBy: resolveOrderBy(sortField, sortDirection),
+      skip,
+      take: POSTS_PAGE_SIZE,
       include: {
         author: {
           select: {
@@ -274,22 +321,6 @@ export default async function AdminPostsPage({
       }),
     ),
   );
-
-  const sortedPosts = [...posts].sort((a, b) => {
-    const aDate = resolvePostDate(a).getTime();
-    const bDate = resolvePostDate(b).getTime();
-
-    if (sortField === "date" && sortDirection === "asc") {
-      return aDate - bDate;
-    }
-    if (sortField === "date" && sortDirection === "desc") {
-      return bDate - aDate;
-    }
-    if (!sortField || !sortDirection) {
-      return bDate - aDate;
-    }
-    return 0;
-  });
 
   const statusLabel = (status: string) => (status === "PUBLISHED" ? m.statusPublished : m.statusDraft);
   const sortLabels = {
@@ -428,7 +459,7 @@ export default async function AdminPostsPage({
                 </tr>
               </thead>
               <tbody>
-                {sortedPosts.map((post) => (
+                {posts.map((post) => (
                   <tr key={post.id}>
                     <td className={styles.checkboxCol}>
                       <input
@@ -452,6 +483,15 @@ export default async function AdminPostsPage({
                             confirmMessage={m.confirmDelete}
                             buttonLabel={m.delete}
                           />
+                          <span className={styles.rowDot}>•</span>
+                          <Link
+                            className={styles.actionLink}
+                            href={`/blog/${post.slug}`}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            {m.goToPost}
+                          </Link>
                         </div>
                       </div>
                     </td>
@@ -483,7 +523,36 @@ export default async function AdminPostsPage({
             <button type="button" className={styles.ghostBtn}>
               {m.apply}
             </button>
-            <span className={styles.itemCount}>{sortedPosts.length} {m.records}</span>
+            <span className={styles.itemCount}>{totalCount} {m.records}</span>
+          </div>
+          <div className={styles.pagination}>
+            <Link
+              className={`${styles.ghostBtn} ${currentPage <= 1 ? styles.ghostBtnDisabled : ""}`}
+              href={buildPageHref(
+                Math.max(1, currentPage - 1),
+                { sortField, sortDirection },
+                { q: query, category: selectedCategory, tag: selectedTag, date: selectedDate },
+              )}
+              aria-disabled={currentPage <= 1}
+              tabIndex={currentPage <= 1 ? -1 : undefined}
+            >
+              {m.prevPage}
+            </Link>
+            <span className={styles.pageInfo}>
+              {interpolate(m.pageInfo, { page: currentPage, total: totalPages })}
+            </span>
+            <Link
+              className={`${styles.ghostBtn} ${currentPage >= totalPages ? styles.ghostBtnDisabled : ""}`}
+              href={buildPageHref(
+                Math.min(totalPages, currentPage + 1),
+                { sortField, sortDirection },
+                { q: query, category: selectedCategory, tag: selectedTag, date: selectedDate },
+              )}
+              aria-disabled={currentPage >= totalPages}
+              tabIndex={currentPage >= totalPages ? -1 : undefined}
+            >
+              {m.nextPage}
+            </Link>
           </div>
         </section>
       )}

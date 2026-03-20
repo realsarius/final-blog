@@ -1,6 +1,7 @@
 .page {
   display: grid;
   gap: var(--space-5);
+  font-family: "Times New Roman", Times, serif;
 }
 
 .header {
@@ -27,6 +28,7 @@
   padding: 7px 12px;
   border-radius: var(--radius-sm);
   font-size: 14px;
+  font-family: inherit;
   background: color-mix(in srgb, var(--surface) 90%, var(--accent) 10%);
 }
 
@@ -80,6 +82,7 @@
   background: var(--surface);
   border-radius: var(--radius-sm);
   font-size: 14px;
+  font-family: inherit;
   line-height: 1;
   min-height: 34px;
   color: var(--text);
@@ -100,13 +103,24 @@
   color: var(--accent-dark);
   border-radius: var(--radius-sm);
   font-size: 14px;
+  font-family: inherit;
   min-height: 34px;
   padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
   cursor: pointer;
+  text-decoration: none;
 }
 
 .ghostBtn:hover {
   background: color-mix(in srgb, var(--surface) 82%, var(--accent) 18%);
+}
+
+.ghostBtnDisabled {
+  opacity: 0.45;
+  pointer-events: none;
 }
 
 .tableWrap {
@@ -177,6 +191,7 @@
 .actionLink {
   color: var(--accent-dark);
   font-size: 13px;
+  font-family: inherit;
 }
 
 .rowDot {
@@ -209,6 +224,7 @@
 
 .danger {
   font-size: 13px;
+  font-family: inherit;
   border: none;
   background: transparent;
   color: #a0191f;
@@ -234,6 +250,20 @@
 
 .itemCount {
   margin-left: auto;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.pageInfo {
+  min-width: 100px;
+  text-align: center;
   font-size: 13px;
   color: var(--muted);
 }
