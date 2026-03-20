@@ -347,7 +347,10 @@ Weekly and PR-triggered `npm audit` check is active:
 
 ## 10. License and Usage Note
 
-There is currently no explicit OSS license file in this repository. Unless stated otherwise in writing, usage/distribution rights remain with the repository owner.
+This project is licensed under the MIT License.
+
+- License text: [`LICENSE`](LICENSE)
+- Third-party dependencies are subject to their own licenses.
 
 ## Additional Documents
 

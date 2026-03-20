@@ -347,7 +347,10 @@ Haftalık ve PR tetiklemeli `npm audit` kontrolü aktif:
 
 ## 10. Lisans ve Kullanım Notu
 
-Bu repoda şu anda açık bir OSS lisans dosyası tanımlı değil. Aksi yazılı bir lisans belirtilmedikçe kodun kullanım/dağıtım hakları varsayılan olarak repo sahibinde kalır.
+Bu proje MIT lisansı ile lisanslanmıştır.
+
+- Lisans metni: [`LICENSE`](LICENSE)
+- Üçüncü parti bağımlılıklar kendi lisans koşullarına tabidir.
 
 ## Ek Dokümanlar
 
