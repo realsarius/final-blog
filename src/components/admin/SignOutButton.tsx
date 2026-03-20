@@ -7,7 +7,7 @@ type SignOutButtonProps = {
   label?: string;
 };
 
-export default function SignOutButton({ className, label = "Çıkış yap" }: SignOutButtonProps) {
+export default function SignOutButton({ className, label = "Sign out" }: SignOutButtonProps) {
   return (
     <button
       type="button"

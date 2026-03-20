@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/slug";
 import { requireAdminSession } from "@/lib/adminAuth";
+import { getMessages, getServerLocale } from "@/lib/i18n";
 import { getFirstErrorMessage, postSchema, splitCommaList } from "@/lib/validation";
 import { parsePostStatus, resolvePublishedAt } from "@/lib/postPublication";
 import styles from "../../post-form.module.css";
@@ -25,6 +26,9 @@ async function generateUniquePostSlug(base: string, currentId: string) {
 
 async function updatePost(formData: FormData) {
   "use server";
+  const locale = await getServerLocale();
+  const messages = await getMessages(locale);
+  const m = messages.admin.posts;
   await requireAdminSession("/admin/posts");
 
   const id = formData.get("id")?.toString() ?? "";
@@ -38,7 +42,7 @@ async function updatePost(formData: FormData) {
   const tags = splitCommaList(formData.get("tags")?.toString() ?? "");
 
   if (!id || !title || !content) {
-    redirect(`/admin/posts/${id}/edit?error=${encodeURIComponent("Başlık ve içerik zorunlu.")}`);
+    redirect(`/admin/posts/${id}/edit?error=${encodeURIComponent(m.requiredTitleContent)}`);
   }
 
   const validation = postSchema.safeParse({
@@ -53,7 +57,7 @@ async function updatePost(formData: FormData) {
   });
 
   if (!validation.success) {
-    const message = getFirstErrorMessage(validation);
+    const message = getFirstErrorMessage(validation, locale);
     redirect(`/admin/posts/${id}/edit?error=${encodeURIComponent(message)}`);
   }
 
@@ -63,7 +67,7 @@ async function updatePost(formData: FormData) {
   }
 
   const baseSlug = slugify(slugInput || validation.data.title);
-  const slug = await generateUniquePostSlug(baseSlug || "yazi", id);
+  const slug = await generateUniquePostSlug(baseSlug || (locale === "en" ? "post" : "yazi"), id);
   const publishedAt = resolvePublishedAt(status, existingPost.publishedAt);
 
   await prisma.post.update({
@@ -102,7 +106,7 @@ async function updatePost(formData: FormData) {
   });
 
   revalidatePath("/admin/posts");
-  redirect(`/admin/posts?success=${encodeURIComponent("Yazı güncellendi.")}`);
+  redirect(`/admin/posts?success=${encodeURIComponent(m.successUpdated)}`);
 }
 
 interface PageProps {
@@ -117,6 +121,10 @@ export default async function EditPostPage({ params, searchParams }: PageProps) 
     typeof resolvedSearchParams.error === "string"
       ? resolvedSearchParams.error
       : undefined;
+  const locale = await getServerLocale();
+  const messages = await getMessages(locale);
+  const m = messages.admin.posts;
+  const form = m.form;
   const [post, categories, tags] = await Promise.all([
     prisma.post.findUnique({
       where: { id: resolvedParams.id },
@@ -139,8 +147,8 @@ export default async function EditPostPage({ params, searchParams }: PageProps) 
   return (
     <div className={styles.page}>
       <header className={styles.header}>
-        <h1>Yazıyı Düzenle</h1>
-        <p>Mevcut içeriği güncelle ve değişiklikleri kaydet.</p>
+        <h1>{form.editTitle}</h1>
+        <p>{form.editSubtitle}</p>
       </header>
 
       {error ? <p className={styles.error}>{error}</p> : null}
@@ -149,63 +157,70 @@ export default async function EditPostPage({ params, searchParams }: PageProps) 
         <input type="hidden" name="id" value={post.id} />
 
         <div className={styles.field}>
-          <label htmlFor="title">Başlık</label>
+          <label htmlFor="title">{form.title}</label>
           <input id="title" name="title" defaultValue={post.title} required />
         </div>
 
         <div className={styles.row}>
           <div className={styles.field}>
-            <label htmlFor="slug">Slug</label>
+            <label htmlFor="slug">{form.slug}</label>
             <input id="slug" name="slug" defaultValue={post.slug} />
           </div>
           <div className={styles.field}>
-            <label htmlFor="status">Durum</label>
+            <label htmlFor="status">{form.status}</label>
             <select id="status" name="status" defaultValue={post.status}>
-              <option value="DRAFT">Taslak</option>
-              <option value="PUBLISHED">Yayınla</option>
+              <option value="DRAFT">{form.statusDraft}</option>
+              <option value="PUBLISHED">{form.statusPublish}</option>
             </select>
           </div>
         </div>
 
         <div className={styles.field}>
-          <label htmlFor="excerpt">Özet</label>
+          <label htmlFor="excerpt">{form.excerpt}</label>
           <textarea id="excerpt" name="excerpt" rows={3} defaultValue={post.excerpt ?? ""} />
         </div>
 
         <div className={styles.field}>
-          <label htmlFor="content">İçerik</label>
-          <EditorField name="content" defaultValue={post.content} />
+          <label htmlFor="content">{form.content}</label>
+          <EditorField name="content" defaultValue={post.content} messages={m.editor} locale={locale} />
         </div>
 
         <div className={styles.row}>
           <TaxonomyPicker
-            label="Kategoriler"
+            label={form.categories}
             name="categories"
             options={categories.map((item) => item.name)}
             defaultSelected={categoryList}
-            placeholder="Kategori ara veya ekle..."
+            placeholder={form.categoriesPlaceholder}
+            removeSuffix={m.taxonomy.removeSuffix}
+            createTemplate={m.taxonomy.create}
+            noMatchesLabel={m.taxonomy.noMatches}
           />
           <TaxonomyPicker
-            label="Etiketler"
+            label={form.tags}
             name="tags"
             options={tags.map((item) => item.name)}
             defaultSelected={tagList}
-            placeholder="Etiket ara veya ekle..."
+            placeholder={form.tagsPlaceholder}
+            removeSuffix={m.taxonomy.removeSuffix}
+            createTemplate={m.taxonomy.create}
+            noMatchesLabel={m.taxonomy.noMatches}
           />
         </div>
 
         <CoverImageField
           name="coverImageUrl"
-          label="Kapak Görseli URL"
+          label={form.coverImageUrl}
+          messages={m.cover}
           defaultValue={post.coverImageUrl ?? ""}
         />
 
         <div className={styles.actions}>
           <button className={styles.primary} type="submit">
-            Güncelle
+            {form.update}
           </button>
           <a className={styles.secondary} href="/admin/posts">
-            Vazgeç
+            {form.cancel}
           </a>
         </div>
       </form>

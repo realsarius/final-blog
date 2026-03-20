@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { interpolate } from "@/lib/interpolate";
 import styles from "./post-form.module.css";
 
 interface TaxonomyPickerProps {
@@ -9,6 +10,9 @@ interface TaxonomyPickerProps {
   options: string[];
   defaultSelected?: string[];
   placeholder?: string;
+  removeSuffix?: string;
+  createTemplate?: string;
+  noMatchesLabel?: string;
 }
 
 function normalize(value: string) {
@@ -20,7 +24,10 @@ export default function TaxonomyPicker({
   name,
   options,
   defaultSelected = [],
-  placeholder = "Ara veya ekle...",
+  placeholder = "Search or add...",
+  removeSuffix = "remove",
+  createTemplate = "Create “{value}”",
+  noMatchesLabel = "No matching item.",
 }: TaxonomyPickerProps) {
   const [query, setQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
@@ -139,7 +146,7 @@ export default function TaxonomyPicker({
             type="button"
             className={styles.taxonomyChip}
             onClick={() => removeItem(item)}
-            aria-label={`${item} kaldır`}
+            aria-label={`${item} ${removeSuffix}`}
           >
             <span>{item}</span>
             <span className={styles.taxonomyChipIcon}>×</span>
@@ -186,11 +193,11 @@ export default function TaxonomyPicker({
                 addItem(query);
               }}
             >
-              “{query.trim()}” oluştur
+              {interpolate(createTemplate, { value: query.trim() })}
             </button>
           ) : null}
           {filteredOptions.length === 0 && !canCreate ? (
-            <div className={styles.taxonomyEmpty}>Eşleşen öğe yok.</div>
+            <div className={styles.taxonomyEmpty}>{noMatchesLabel}</div>
           ) : null}
         </div>
       ) : null}

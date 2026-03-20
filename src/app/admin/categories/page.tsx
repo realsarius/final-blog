@@ -13,10 +13,13 @@ import styles from "./page.module.css";
 async function addCategory(formData: FormData) {
   "use server";
   await requireAdminSession("/admin/categories");
+  const locale = await getServerLocale();
+  const messages = await getMessages(locale);
+  const m = messages.admin.categories;
   const name = formData.get("name")?.toString().trim() ?? "";
   const validation = nameSchema.safeParse(name);
   if (!validation.success) {
-    const message = getFirstErrorMessage(validation);
+    const message = getFirstErrorMessage(validation, locale);
     redirect(`/admin/categories?error=${encodeURIComponent(message)}`);
   }
   const slug = slugify(name) || "kategori";
@@ -32,17 +35,20 @@ async function addCategory(formData: FormData) {
     });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-      redirect(`/admin/categories?error=${encodeURIComponent("Bu kategori adı zaten kayıtlı.")}`);
+      redirect(`/admin/categories?error=${encodeURIComponent(m.duplicateName)}`);
     }
     throw error;
   }
   revalidatePath("/admin/categories");
-  redirect(`/admin/categories?success=${encodeURIComponent("Kategori eklendi.")}`);
+  redirect(`/admin/categories?success=${encodeURIComponent(m.successAdded)}`);
 }
 
 async function updateCategory(formData: FormData) {
   "use server";
   await requireAdminSession("/admin/categories");
+  const locale = await getServerLocale();
+  const messages = await getMessages(locale);
+  const m = messages.admin.categories;
   const id = formData.get("id")?.toString();
   const name = formData.get("name")?.toString().trim() ?? "";
   if (!id || !name) {
@@ -51,7 +57,7 @@ async function updateCategory(formData: FormData) {
 
   const validation = nameSchema.safeParse(name);
   if (!validation.success) {
-    const message = getFirstErrorMessage(validation);
+    const message = getFirstErrorMessage(validation, locale);
     redirect(`/admin/categories?error=${encodeURIComponent(message)}`);
   }
 
@@ -81,17 +87,20 @@ async function updateCategory(formData: FormData) {
     });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-      redirect(`/admin/categories?error=${encodeURIComponent("Bu kategori adı zaten kayıtlı.")}`);
+      redirect(`/admin/categories?error=${encodeURIComponent(m.duplicateName)}`);
     }
     throw error;
   }
   revalidatePath("/admin/categories");
-  redirect(`/admin/categories?success=${encodeURIComponent("Kategori güncellendi.")}`);
+  redirect(`/admin/categories?success=${encodeURIComponent(m.successUpdated)}`);
 }
 
 async function deleteCategory(formData: FormData) {
   "use server";
   await requireAdminSession("/admin/categories");
+  const locale = await getServerLocale();
+  const messages = await getMessages(locale);
+  const m = messages.admin.categories;
   const id = formData.get("id")?.toString();
   if (!id) {
     return;
@@ -99,7 +108,7 @@ async function deleteCategory(formData: FormData) {
   await prisma.postCategory.deleteMany({ where: { categoryId: id } });
   await prisma.category.delete({ where: { id } });
   revalidatePath("/admin/categories");
-  redirect(`/admin/categories?success=${encodeURIComponent("Kategori silindi.")}`);
+  redirect(`/admin/categories?success=${encodeURIComponent(m.successDeleted)}`);
 }
 
 export default async function CategoriesPage({

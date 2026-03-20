@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
+import { getServerLocale } from "@/lib/i18n";
 import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
@@ -84,12 +85,16 @@ function toUiTransitionDirection(value: unknown): HeroTransitionDirectionUi {
 }
 
 async function requireAdmin() {
+  const locale = await getServerLocale();
+  const t = locale === "en"
+    ? { sessionRequired: "Session required.", forbidden: "You are not authorized." }
+    : { sessionRequired: "Oturum gerekli.", forbidden: "Yetkiniz yok." };
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
-    return NextResponse.json({ ok: false, error: "Oturum gerekli." }, { status: 401 });
+    return NextResponse.json({ ok: false, error: t.sessionRequired }, { status: 401 });
   }
   if (session.user.role !== "ADMIN") {
-    return NextResponse.json({ ok: false, error: "Yetkiniz yok." }, { status: 403 });
+    return NextResponse.json({ ok: false, error: t.forbidden }, { status: 403 });
   }
   return null;
 }
@@ -180,6 +185,20 @@ export async function GET() {
 }
 
 export async function PUT(request: Request) {
+  const locale = await getServerLocale();
+  const t = locale === "en"
+    ? {
+      heroNotReady: "Hero infrastructure is not ready yet. Restart the dev server after Prisma generate/migration.",
+      invalidBody: "Invalid request body.",
+      slidesRequired: "slides array is required.",
+      invalidPostSelection: "One of the selected posts is invalid.",
+    }
+    : {
+      heroNotReady: "Hero altyapısı henüz hazır değil. Prisma generate/migration sonrası geliştirme sunucusunu yeniden başlatın.",
+      invalidBody: "Geçersiz istek gövdesi.",
+      slidesRequired: "slides dizisi zorunlu.",
+      invalidPostSelection: "Seçilen yazılardan biri geçersiz.",
+    };
   const authError = await requireAdmin();
   if (authError) {
     return authError;
@@ -190,7 +209,7 @@ export async function PUT(request: Request) {
     return NextResponse.json(
       {
         ok: false,
-        error: "Hero altyapısı henüz hazır değil. Prisma generate/migration sonrası geliştirme sunucusunu yeniden başlatın.",
+        error: t.heroNotReady,
       },
       { status: 503 },
     );
@@ -200,7 +219,7 @@ export async function PUT(request: Request) {
   try {
     payload = await request.json();
   } catch {
-    return NextResponse.json({ ok: false, error: "Geçersiz istek gövdesi." }, { status: 400 });
+    return NextResponse.json({ ok: false, error: t.invalidBody }, { status: 400 });
   }
 
   const rawSlides = payload && typeof payload === "object" && "slides" in payload
@@ -211,7 +230,7 @@ export async function PUT(request: Request) {
     : null;
 
   if (!Array.isArray(rawSlides)) {
-    return NextResponse.json({ ok: false, error: "slides dizisi zorunlu." }, { status: 400 });
+    return NextResponse.json({ ok: false, error: t.slidesRequired }, { status: 400 });
   }
 
   const slides = rawSlides
@@ -260,7 +279,7 @@ export async function PUT(request: Request) {
     });
 
     if (count !== postIds.length) {
-      return NextResponse.json({ ok: false, error: "Seçilen yazılardan biri geçersiz." }, { status: 400 });
+      return NextResponse.json({ ok: false, error: t.invalidPostSelection }, { status: 400 });
     }
   }
 

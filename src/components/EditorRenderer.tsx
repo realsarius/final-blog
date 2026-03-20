@@ -5,6 +5,7 @@ import { parseEditorContent } from "@/lib/content";
 
 type EditorRendererProps = {
   content: string;
+  locale?: "tr" | "en";
 };
 
 type ListNode = string | {
@@ -131,7 +132,10 @@ function getImageUrl(data: Record<string, unknown>) {
   return findImageUrl(data);
 }
 
-export default function EditorRenderer({ content }: EditorRendererProps) {
+export default function EditorRenderer({ content, locale = "tr" }: EditorRendererProps) {
+  const t = locale === "en"
+    ? { upcoming: "Content will be added soon.", imageAlt: "Image" }
+    : { upcoming: "İçerik yakında eklenecek.", imageAlt: "Görsel" };
   const parsed = parseEditorContent(content);
 
   if (!parsed) {
@@ -142,7 +146,7 @@ export default function EditorRenderer({ content }: EditorRendererProps) {
     return (
       <>
         {paragraphs.length === 0 ? (
-          <p>İçerik yakında eklenecek.</p>
+          <p>{t.upcoming}</p>
         ) : (
           paragraphs.map((paragraph, index) => <p key={index}>{paragraph}</p>)
         )}
@@ -151,7 +155,7 @@ export default function EditorRenderer({ content }: EditorRendererProps) {
   }
 
   if (parsed.blocks.length === 0) {
-    return <p>İçerik yakında eklenecek.</p>;
+    return <p>{t.upcoming}</p>;
   }
 
   return (
@@ -223,7 +227,7 @@ export default function EditorRenderer({ content }: EditorRendererProps) {
               >
                 <Image
                   src={url}
-                  alt={caption || "Görsel"}
+                  alt={caption || t.imageAlt}
                   width={1200}
                   height={800}
                   unoptimized

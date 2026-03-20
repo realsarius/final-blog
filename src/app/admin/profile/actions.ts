@@ -2,6 +2,7 @@
 
 import { compare, hash } from "bcryptjs";
 import { requireAdminSession } from "@/lib/adminAuth";
+import { getMessages, getServerLocale } from "@/lib/i18n";
 import { prisma } from "@/lib/prisma";
 import { passwordSchema } from "@/lib/validation";
 
@@ -14,6 +15,9 @@ export async function changePassword(
   _state: ActionState,
   formData: FormData
 ): Promise<ActionState> {
+  const locale = await getServerLocale();
+  const messages = await getMessages(locale);
+  const m = messages.admin.profile;
   const session = await requireAdminSession("/admin/profile");
 
   const currentPassword = formData.get("currentPassword")?.toString() ?? "";
@@ -21,16 +25,16 @@ export async function changePassword(
   const confirmPassword = formData.get("confirmPassword")?.toString() ?? "";
 
   if (!currentPassword || !newPassword) {
-    return { ok: false, message: "Tüm alanları doldur." };
+    return { ok: false, message: m.allFieldsRequired };
   }
 
   const passwordValidation = passwordSchema.safeParse(newPassword);
   if (!passwordValidation.success) {
-    return { ok: false, message: passwordValidation.error.issues[0]?.message ?? "Parola hatalı." };
+    return { ok: false, message: m.invalidPassword };
   }
 
   if (newPassword !== confirmPassword) {
-    return { ok: false, message: "Parolalar eşleşmiyor." };
+    return { ok: false, message: m.passwordMismatch };
   }
 
   const user = await prisma.user.findUnique({
@@ -38,12 +42,12 @@ export async function changePassword(
   });
 
   if (!user) {
-    return { ok: false, message: "Kullanıcı bulunamadı." };
+    return { ok: false, message: m.userNotFound };
   }
 
   const isValid = await compare(currentPassword, user.passwordHash);
   if (!isValid) {
-    return { ok: false, message: "Mevcut parola hatalı." };
+    return { ok: false, message: m.currentPasswordInvalid };
   }
 
   const passwordHash = await hash(newPassword, 12);
@@ -55,5 +59,5 @@ export async function changePassword(
     },
   });
 
-  return { ok: true, message: "Parola güncellendi." };
+  return { ok: true, message: m.passwordUpdated };
 }

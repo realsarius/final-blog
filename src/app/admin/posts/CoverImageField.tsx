@@ -43,13 +43,40 @@ interface CoverImageFieldProps {
   name: string;
   label: string;
   defaultValue?: string;
+  messages?: {
+    invalidType: string;
+    uploadFailed: string;
+    removeFailed: string;
+    urlPlaceholder: string;
+    uploadButton: string;
+    uploading: string;
+    removeButton: string;
+    removing: string;
+    dropHint: string;
+    dropNow: string;
+    previewAlt: string;
+  };
 }
 
 export default function CoverImageField({
   name,
   label,
   defaultValue = "",
+  messages,
 }: CoverImageFieldProps) {
+  const m = messages ?? {
+    invalidType: "Unsupported file type. Please upload JPG, PNG, WebP, or GIF.",
+    uploadFailed: "Cover image upload failed.",
+    removeFailed: "Image could not be deleted.",
+    urlPlaceholder: "https://...",
+    uploadButton: "Choose File",
+    uploading: "Uploading...",
+    removeButton: "Remove",
+    removing: "Removing...",
+    dropHint: "Image uploads automatically after drag and drop.",
+    dropNow: "Drop now",
+    previewAlt: "Cover image preview",
+  };
   const inputId = useId();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [url, setUrl] = useState(() => normalizeCoverUrl(defaultValue));
@@ -65,7 +92,7 @@ export default function CoverImageField({
 
   const uploadFile = async (file: File) => {
     if (!ACCEPTED_TYPES.includes(file.type)) {
-      setError("Desteklenmeyen dosya türü. Lütfen JPG, PNG, WebP veya GIF yükleyin.");
+      setError(m.invalidType);
       return;
     }
 
@@ -84,14 +111,14 @@ export default function CoverImageField({
 
       const result = await response.json().catch(() => null);
       if (!response.ok || result?.success !== 1 || typeof result?.file?.url !== "string") {
-        throw new Error(typeof result?.error === "string" ? result.error : "Kapak görseli yüklenemedi.");
+        throw new Error(typeof result?.error === "string" ? result.error : m.uploadFailed);
       }
 
       const uploadedUrl = normalizeCoverUrl(result.file.url);
       setUrl(uploadedUrl);
       setUploadedKey(typeof result.file.key === "string" ? result.file.key : null);
     } catch (uploadError) {
-      const message = uploadError instanceof Error ? uploadError.message : "Kapak görseli yüklenemedi.";
+      const message = uploadError instanceof Error ? uploadError.message : m.uploadFailed;
       setError(message);
     } finally {
       setIsUploading(false);
@@ -146,7 +173,7 @@ export default function CoverImageField({
       });
       const result = await response.json().catch(() => null);
       if (!response.ok || result?.success !== 1) {
-        throw new Error(typeof result?.error === "string" ? result.error : "Görsel silinemedi.");
+        throw new Error(typeof result?.error === "string" ? result.error : m.removeFailed);
       }
 
       setUrl("");
@@ -155,7 +182,7 @@ export default function CoverImageField({
         fileInputRef.current.value = "";
       }
     } catch (removeError) {
-      const message = removeError instanceof Error ? removeError.message : "Görsel silinemedi.";
+      const message = removeError instanceof Error ? removeError.message : m.removeFailed;
       setError(message);
     } finally {
       setIsRemoving(false);
@@ -183,7 +210,7 @@ export default function CoverImageField({
               setUrl(normalizeCoverUrl(event.target.value));
               setUploadedKey(null);
             }}
-            placeholder="https://..."
+            placeholder={m.urlPlaceholder}
           />
           <button
             className={styles.coverUploadAction}
@@ -191,7 +218,7 @@ export default function CoverImageField({
             onClick={openPicker}
             disabled={isUploading || isRemoving}
           >
-            {isUploading ? "Yükleniyor..." : "Dosya Seç"}
+            {isUploading ? m.uploading : m.uploadButton}
           </button>
           <button
             className={styles.coverRemoveAction}
@@ -199,13 +226,13 @@ export default function CoverImageField({
             onClick={handleRemove}
             disabled={!url.trim() || isUploading || isRemoving}
           >
-            {isRemoving ? "Siliniyor..." : "Kaldır"}
+            {isRemoving ? m.removing : m.removeButton}
           </button>
         </div>
-        <p className={styles.coverUploadHint}>Sürükle-bırak sonrası görsel otomatik yüklenir.</p>
+        <p className={styles.coverUploadHint}>{m.dropHint}</p>
         {isDragOver && (
           <div className={styles.coverDropOverlay}>
-            <span>Şimdi bırakabilirsiniz</span>
+            <span>{m.dropNow}</span>
           </div>
         )}
       </div>
@@ -220,7 +247,7 @@ export default function CoverImageField({
         <div className={styles.coverPreview}>
           <Image
             src={previewUrl}
-            alt="Kapak görseli önizleme"
+            alt={m.previewAlt}
             className={styles.coverPreviewImage}
             width={1200}
             height={675}

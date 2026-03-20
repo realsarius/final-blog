@@ -8,16 +8,24 @@ import styles from "./page.module.css";
 
 const initialState = { ok: false, message: "" };
 
-function SubmitButton() {
+type ProfileMessages = {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+  submit: string;
+  submitting: string;
+};
+
+function SubmitButton({ messages }: { messages: ProfileMessages }) {
   const { pending } = useFormStatus();
   return (
     <button className={styles.primary} type="submit" disabled={pending}>
-      {pending ? "Güncelleniyor..." : "Parolayı Güncelle"}
+      {pending ? messages.submitting : messages.submit}
     </button>
   );
 }
 
-export default function PasswordForm() {
+export default function PasswordForm({ messages }: { messages: ProfileMessages }) {
   const [state, formAction] = useActionState(changePassword, initialState);
   const lastMessageRef = useRef<string | null>(null);
 
@@ -36,15 +44,15 @@ export default function PasswordForm() {
   return (
     <form className={styles.form} action={formAction}>
       <div className={styles.field}>
-        <label htmlFor="currentPassword">Mevcut parola</label>
+        <label htmlFor="currentPassword">{messages.currentPassword}</label>
         <input id="currentPassword" name="currentPassword" type="password" required />
       </div>
       <div className={styles.field}>
-        <label htmlFor="newPassword">Yeni parola</label>
+        <label htmlFor="newPassword">{messages.newPassword}</label>
         <input id="newPassword" name="newPassword" type="password" required />
       </div>
       <div className={styles.field}>
-        <label htmlFor="confirmPassword">Yeni parola (tekrar)</label>
+        <label htmlFor="confirmPassword">{messages.confirmPassword}</label>
         <input id="confirmPassword" name="confirmPassword" type="password" required />
       </div>
 
@@ -54,7 +62,7 @@ export default function PasswordForm() {
         </p>
       ) : null}
 
-      <SubmitButton />
+      <SubmitButton messages={messages} />
     </form>
   );
 }

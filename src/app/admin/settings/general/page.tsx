@@ -2,6 +2,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdminSession } from "@/lib/adminAuth";
 import { getResolvedSiteSettings, upsertSiteSettings } from "@/lib/siteSettings";
+import { getMessages, getServerLocale } from "@/lib/i18n";
 import styles from "./page.module.css";
 
 const WEEK_START_OPTIONS = ["Monday", "Sunday", "Saturday"] as const;
@@ -53,6 +54,7 @@ async function saveSettings(formData: FormData) {
   const language = LANGUAGE_OPTIONS.includes(languageRaw as (typeof LANGUAGE_OPTIONS)[number])
     ? languageRaw
     : current.language;
+  const messages = await getMessages(language === "en" ? "en" : "tr");
 
   await upsertSiteSettings({
     siteName,
@@ -72,28 +74,36 @@ async function saveSettings(formData: FormData) {
   revalidatePath("/contact");
   revalidatePath("/privacy");
   revalidatePath("/admin/settings/general");
-  redirect("/admin/settings/general?success=Ayarlar%20kaydedildi.");
+  redirect(`/admin/settings/general?success=${encodeURIComponent(messages.admin.settings.general.successSaved)}`);
 }
 
 export default async function AdminGeneralSettingsPage() {
   await requireAdminSession("/admin/settings/general");
+  const locale = await getServerLocale();
+  const messages = await getMessages(locale);
+  const t = messages.admin.settings.general;
   const settings = await getResolvedSiteSettings();
+  const weekStartLabels: Record<(typeof WEEK_START_OPTIONS)[number], string> = {
+    Monday: t.weekStartsOnMonday,
+    Sunday: t.weekStartsOnSunday,
+    Saturday: t.weekStartsOnSaturday,
+  };
 
   return (
     <div className={styles.page}>
       <header className={styles.header}>
-        <h1>Genel Ayarlar</h1>
-        <p>Öncelik veritabanı ayarlarında. Kayıt yoksa .env değerleri otomatik kullanılır.</p>
+        <h1>{t.title}</h1>
+        <p>{t.description}</p>
       </header>
 
       <form action={saveSettings} className={styles.form}>
         <label>
-          Site Başlığı
+          {t.siteTitle}
           <input name="siteName" defaultValue={settings.siteName} required />
         </label>
 
         <label>
-          Site Açıklaması (Tagline)
+          {t.siteDescription}
           <textarea
             name="siteDescription"
             rows={3}
@@ -103,65 +113,65 @@ export default async function AdminGeneralSettingsPage() {
         </label>
 
         <label>
-          Site URL
+          {t.siteUrl}
           <input name="siteUrl" defaultValue={settings.siteUrl} required />
         </label>
 
         <div className={styles.row}>
           <label>
-            Admin E-posta
+            {t.adminEmail}
             <input name="adminEmail" type="email" defaultValue={settings.adminEmail} required />
           </label>
 
           <label>
-            Saat Dilimi
+            {t.timezone}
             <input name="timezone" defaultValue={settings.timezone} required />
           </label>
         </div>
 
         <div className={styles.row}>
           <label>
-            Admin Ad
+            {t.adminFirstName}
             <input name="adminFirstName" defaultValue={settings.adminFirstName} required />
           </label>
           <label>
-            Admin Soyad
+            {t.adminLastName}
             <input name="adminLastName" defaultValue={settings.adminLastName} required />
           </label>
         </div>
 
         <div className={styles.row}>
           <label>
-            Tarih Formatı
+            {t.dateFormat}
             <input name="dateFormat" defaultValue={settings.dateFormat} required />
           </label>
           <label>
-            Saat Formatı
+            {t.timeFormat}
             <input name="timeFormat" defaultValue={settings.timeFormat} required />
           </label>
         </div>
 
         <div className={styles.row}>
           <label>
-            Hafta Başlangıcı
+            {t.weekStartsOn}
             <select name="weekStartsOn" defaultValue={settings.weekStartsOn}>
               {WEEK_START_OPTIONS.map((value) => (
-                <option key={value} value={value}>{value}</option>
+                <option key={value} value={value}>{weekStartLabels[value]}</option>
               ))}
             </select>
           </label>
 
           <label>
-            Dil
+            {t.language}
             <select name="language" defaultValue={settings.language}>
-              <option value="tr">Türkçe</option>
-              <option value="en">English</option>
+              <option value="tr">{t.languageTurkish}</option>
+              <option value="en">{t.languageEnglish}</option>
             </select>
           </label>
         </div>
 
         <button type="submit" className={styles.submit}>
-          Save Changes
+          {t.saveChanges}
         </button>
       </form>
     </div>

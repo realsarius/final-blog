@@ -13,10 +13,13 @@ import styles from "./page.module.css";
 async function addTag(formData: FormData) {
   "use server";
   await requireAdminSession("/admin/tags");
+  const locale = await getServerLocale();
+  const messages = await getMessages(locale);
+  const m = messages.admin.tags;
   const name = formData.get("name")?.toString().trim() ?? "";
   const validation = nameSchema.safeParse(name);
   if (!validation.success) {
-    const message = getFirstErrorMessage(validation);
+    const message = getFirstErrorMessage(validation, locale);
     redirect(`/admin/tags?error=${encodeURIComponent(message)}`);
   }
   const slug = slugify(name) || "etiket";
@@ -32,17 +35,20 @@ async function addTag(formData: FormData) {
     });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-      redirect(`/admin/tags?error=${encodeURIComponent("Bu etiket adı zaten kayıtlı.")}`);
+      redirect(`/admin/tags?error=${encodeURIComponent(m.duplicateName)}`);
     }
     throw error;
   }
   revalidatePath("/admin/tags");
-  redirect(`/admin/tags?success=${encodeURIComponent("Etiket eklendi.")}`);
+  redirect(`/admin/tags?success=${encodeURIComponent(m.successAdded)}`);
 }
 
 async function updateTag(formData: FormData) {
   "use server";
   await requireAdminSession("/admin/tags");
+  const locale = await getServerLocale();
+  const messages = await getMessages(locale);
+  const m = messages.admin.tags;
   const id = formData.get("id")?.toString();
   const name = formData.get("name")?.toString().trim() ?? "";
   if (!id || !name) {
@@ -51,7 +57,7 @@ async function updateTag(formData: FormData) {
 
   const validation = nameSchema.safeParse(name);
   if (!validation.success) {
-    const message = getFirstErrorMessage(validation);
+    const message = getFirstErrorMessage(validation, locale);
     redirect(`/admin/tags?error=${encodeURIComponent(message)}`);
   }
 
@@ -81,17 +87,20 @@ async function updateTag(formData: FormData) {
     });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-      redirect(`/admin/tags?error=${encodeURIComponent("Bu etiket adı zaten kayıtlı.")}`);
+      redirect(`/admin/tags?error=${encodeURIComponent(m.duplicateName)}`);
     }
     throw error;
   }
   revalidatePath("/admin/tags");
-  redirect(`/admin/tags?success=${encodeURIComponent("Etiket güncellendi.")}`);
+  redirect(`/admin/tags?success=${encodeURIComponent(m.successUpdated)}`);
 }
 
 async function deleteTag(formData: FormData) {
   "use server";
   await requireAdminSession("/admin/tags");
+  const locale = await getServerLocale();
+  const messages = await getMessages(locale);
+  const m = messages.admin.tags;
   const id = formData.get("id")?.toString();
   if (!id) {
     return;
@@ -99,7 +108,7 @@ async function deleteTag(formData: FormData) {
   await prisma.postTag.deleteMany({ where: { tagId: id } });
   await prisma.tag.delete({ where: { id } });
   revalidatePath("/admin/tags");
-  redirect(`/admin/tags?success=${encodeURIComponent("Etiket silindi.")}`);
+  redirect(`/admin/tags?success=${encodeURIComponent(m.successDeleted)}`);
 }
 
 export default async function TagsPage({

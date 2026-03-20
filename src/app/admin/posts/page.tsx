@@ -12,6 +12,9 @@ import styles from "./page.module.css";
 async function deletePost(formData: FormData) {
   "use server";
   await requireAdminSession("/admin/posts");
+  const locale = await getServerLocale();
+  const messages = await getMessages(locale);
+  const m = messages.admin.posts;
   const id = formData.get("id")?.toString();
   if (!id) {
     return;
@@ -20,7 +23,7 @@ async function deletePost(formData: FormData) {
   await prisma.postTag.deleteMany({ where: { postId: id } });
   await prisma.post.delete({ where: { id } });
   revalidatePath("/admin/posts");
-  redirect(`/admin/posts?success=${encodeURIComponent("Yazı silindi.")}`);
+  redirect(`/admin/posts?success=${encodeURIComponent(m.successDeleted)}`);
 }
 
 type SortField = "title" | "date";
@@ -52,12 +55,12 @@ function parseMonthRange(monthValue: string): { start: Date; end: Date } | null 
   };
 }
 
-function formatMonthLabel(monthValue: string) {
+function formatMonthLabel(monthValue: string, locale: "tr" | "en") {
   const range = parseMonthRange(monthValue);
   if (!range) {
     return monthValue;
   }
-  return new Intl.DateTimeFormat("tr-TR", {
+  return new Intl.DateTimeFormat(locale === "en" ? "en-US" : "tr-TR", {
     month: "long",
     year: "numeric",
     timeZone: "UTC",
@@ -314,7 +317,7 @@ export default async function AdminPostsPage({
           <p>{m.emptyText}</p>
         </div>
       ) : (
-        <section className={styles.listArea} aria-label="Yazı listesi">
+        <section className={styles.listArea} aria-label={m.listAria}>
           <div className={styles.toolbar}>
             <form className={styles.toolbarLeft} method="get">
               {sortField && sortDirection ? (
@@ -337,7 +340,7 @@ export default async function AdminPostsPage({
                 <option value="all">{m.allDates}</option>
                 {monthOptions.map((monthOption) => (
                   <option key={monthOption} value={monthOption}>
-                    {formatMonthLabel(monthOption)}
+                    {formatMonthLabel(monthOption, locale)}
                   </option>
                 ))}
               </select>
@@ -395,7 +398,7 @@ export default async function AdminPostsPage({
             <table className={styles.table}>
               <thead>
                 <tr>
-                  <th className={styles.checkboxCol} aria-label="Seçim" />
+                  <th className={styles.checkboxCol} aria-label={m.checkboxSelect} />
                   <th>
                     <Link
                       href={buildSortHref(
@@ -431,7 +434,7 @@ export default async function AdminPostsPage({
                       <input
                         type="checkbox"
                         className={styles.checkbox}
-                        aria-label={`${post.title} seç`}
+                        aria-label={`${post.title} ${m.selectSuffix}`}
                       />
                     </td>
                     <td>
@@ -460,7 +463,7 @@ export default async function AdminPostsPage({
                       <div className={styles.dateCell}>
                         <span>{statusLabel(post.status)}</span>
                         <time dateTime={post.createdAt.toISOString()}>
-                          {formatDate(resolvePostDate(post), true)}
+                          {formatDate(resolvePostDate(post), true, locale)}
                         </time>
                       </div>
                     </td>

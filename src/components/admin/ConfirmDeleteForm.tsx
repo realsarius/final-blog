@@ -14,8 +14,8 @@ export default function ConfirmDeleteForm({
   idValue,
   idName = "id",
   className,
-  buttonLabel = "Sil",
-  confirmMessage = "Bu kaydı silmek istediğine emin misin?",
+  buttonLabel = "Delete",
+  confirmMessage = "Are you sure you want to delete this record?",
 }: ConfirmDeleteFormProps) {
   return (
     <form

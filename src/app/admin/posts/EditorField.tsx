@@ -5,12 +5,87 @@ import type EditorJS from "@editorjs/editorjs";
 import type { BlockToolConstructable, OutputData } from "@editorjs/editorjs";
 import EditorRenderer from "@/components/EditorRenderer";
 import { parseEditorContent } from "@/lib/content";
+import { interpolate } from "@/lib/interpolate";
 import styles from "./post-form.module.css";
 
 interface EditorFieldProps {
   name: string;
   defaultValue?: string;
+  messages?: EditorMessages;
+  locale?: "tr" | "en";
 }
+
+type EditorMessages = {
+  tabContent: string;
+  tabPreview: string;
+  addBlock: string;
+  dragBlock: string;
+  finishBlock: string;
+  complete: string;
+  filterPlaceholder: string;
+  noResults: string;
+  preparing: string;
+  livePreview: string;
+  commandParagraphDescription: string;
+  commandHeaderLabel: string;
+  commandHeaderDescription: string;
+  commandListLabel: string;
+  commandListDescription: string;
+  commandQuoteLabel: string;
+  commandQuoteDescription: string;
+  commandCodeLabel: string;
+  commandCodeDescription: string;
+  commandImageLabel: string;
+  commandImageDescription: string;
+  optionHeading: string;
+  optionListUnordered: string;
+  optionListOrdered: string;
+  optionImageBorder: string;
+  optionImageStretch: string;
+  optionImageBackground: string;
+  optionMoveUp: string;
+  optionDelete: string;
+  optionMoveDown: string;
+  quotePlaceholder: string;
+  quoteCaptionPlaceholder: string;
+  codePlaceholder: string;
+};
+
+const DEFAULT_EDITOR_MESSAGES: EditorMessages = {
+  tabContent: "Content",
+  tabPreview: "Preview",
+  addBlock: "Add block",
+  dragBlock: "Drag block",
+  finishBlock: "Finish block",
+  complete: "Done",
+  filterPlaceholder: "Filter",
+  noResults: "No results found.",
+  preparing: "Editor is preparing...",
+  livePreview: "Live Preview",
+  commandParagraphDescription: "Normal text block",
+  commandHeaderLabel: "Heading",
+  commandHeaderDescription: "H2/H3 heading block",
+  commandListLabel: "List",
+  commandListDescription: "Bullet list block",
+  commandQuoteLabel: "Quote",
+  commandQuoteDescription: "Quote block",
+  commandCodeLabel: "Code",
+  commandCodeDescription: "Code block",
+  commandImageLabel: "Image",
+  commandImageDescription: "Upload image or paste URL",
+  optionHeading: "Heading {level}",
+  optionListUnordered: "Unordered list",
+  optionListOrdered: "Ordered list",
+  optionImageBorder: "Add border",
+  optionImageStretch: "Stretch image",
+  optionImageBackground: "Add background",
+  optionMoveUp: "Move up",
+  optionDelete: "Delete",
+  optionMoveDown: "Move down",
+  quotePlaceholder: "Write quote",
+  quoteCaptionPlaceholder: "Quote source (optional)",
+  codePlaceholder: "Write your code here",
+};
 
 type SlashCommand = {
   id: string;
@@ -87,55 +162,57 @@ type EditorRuntimeApi = EditorJS & {
   caret?: EditorCaretApi;
 };
 
-const SLASH_COMMANDS: SlashCommand[] = [
-  {
-    id: "paragraph",
-    label: "Paragraf",
-    description: "Normal metin bloğu",
-    type: "paragraph",
-    data: { text: "" },
-    keywords: ["text", "yazi"],
-  },
-  {
-    id: "header",
-    label: "Başlık",
-    description: "H2/H3 başlık bloğu",
-    type: "header",
-    data: { text: "", level: 2 },
-    keywords: ["heading", "title"],
-  },
-  {
-    id: "list",
-    label: "Liste",
-    description: "Madde listesi",
-    type: "list",
-    keywords: ["bullet", "madde"],
-  },
-  {
-    id: "quote",
-    label: "Alıntı",
-    description: "Quote bloğu",
-    type: "quote",
-    data: { text: "", caption: "" },
-    keywords: ["citation", "quote"],
-  },
-  {
-    id: "code",
-    label: "Kod",
-    description: "Kod bloğu",
-    type: "code",
-    data: { code: "" },
-    keywords: ["code", "snippet"],
-  },
-  {
-    id: "image",
-    label: "Görsel",
-    description: "Resim yükle veya URL yapıştır",
-    type: "image",
-    data: {},
-    keywords: ["image", "photo", "resim"],
-  },
-];
+function buildSlashCommands(messages: EditorMessages): SlashCommand[] {
+  return [
+    {
+      id: "paragraph",
+      label: "Paragraph",
+      description: messages.commandParagraphDescription,
+      type: "paragraph",
+      data: { text: "" },
+      keywords: ["text", "paragraph"],
+    },
+    {
+      id: "header",
+      label: messages.commandHeaderLabel,
+      description: messages.commandHeaderDescription,
+      type: "header",
+      data: { text: "", level: 2 },
+      keywords: ["heading", "title"],
+    },
+    {
+      id: "list",
+      label: messages.commandListLabel,
+      description: messages.commandListDescription,
+      type: "list",
+      keywords: ["bullet", "list"],
+    },
+    {
+      id: "quote",
+      label: messages.commandQuoteLabel,
+      description: messages.commandQuoteDescription,
+      type: "quote",
+      data: { text: "", caption: "" },
+      keywords: ["citation", "quote"],
+    },
+    {
+      id: "code",
+      label: messages.commandCodeLabel,
+      description: messages.commandCodeDescription,
+      type: "code",
+      data: { code: "" },
+      keywords: ["code", "snippet"],
+    },
+    {
+      id: "image",
+      label: messages.commandImageLabel,
+      description: messages.commandImageDescription,
+      type: "image",
+      data: {},
+      keywords: ["image", "photo"],
+    },
+  ];
+}
 
 const COMMAND_ICONS: Record<string, string> = {
   paragraph: "T",
@@ -376,7 +453,10 @@ function buildInitialData(defaultValue: string): OutputData {
 export default function EditorField({
   name,
   defaultValue = "",
+  messages,
+  locale = "tr",
 }: EditorFieldProps) {
+  const m = messages ?? DEFAULT_EDITOR_MESSAGES;
   const fieldRef = useRef<HTMLDivElement | null>(null);
   const holderRef = useRef<HTMLDivElement | null>(null);
   const editorRef = useRef<EditorJS | null>(null);
@@ -418,6 +498,7 @@ export default function EditorField({
     overIndex: null,
     dragging: false,
   });
+  const slashCommands = useMemo(() => buildSlashCommands(m), [m]);
 
   const getEditor = useCallback((): EditorRuntimeApi | null => {
     return editorRef.current as EditorRuntimeApi | null;
@@ -426,15 +507,15 @@ export default function EditorField({
   const filteredCommands = useMemo(() => {
     const query = menuQuery.trim().toLowerCase();
     if (!query) {
-      return SLASH_COMMANDS;
+      return slashCommands;
     }
-    return SLASH_COMMANDS.filter((command) => {
+    return slashCommands.filter((command) => {
       if (command.label.toLowerCase().includes(query)) {
         return true;
       }
       return (command.keywords ?? []).some((keyword) => keyword.includes(query));
     });
-  }, [menuQuery]);
+  }, [menuQuery, slashCommands]);
 
   const blockMenuOptions = useMemo(() => {
     const options: BlockMenuOption[] = [];
@@ -445,7 +526,7 @@ export default function EditorField({
         options.push({
           id: `header-${level}`,
           kind: "headerLevel",
-          label: `Başlık ${level}`,
+          label: interpolate(m.optionHeading, { level }),
           icon: `H${level}`,
           value: level,
           selected: context.headerLevel === level,
@@ -460,7 +541,7 @@ export default function EditorField({
         {
           id: "list-unordered",
           kind: "listStyle",
-          label: "Sırasız liste",
+          label: m.optionListUnordered,
           icon: "•",
           value: "unordered",
           selected: context.listStyle === "unordered",
@@ -469,7 +550,7 @@ export default function EditorField({
         {
           id: "list-ordered",
           kind: "listStyle",
-          label: "Sıralı liste",
+          label: m.optionListOrdered,
           icon: "1.",
           value: "ordered",
           selected: context.listStyle === "ordered",
@@ -484,7 +565,7 @@ export default function EditorField({
         {
           id: "image-with-border",
           kind: "imageWithBorder",
-          label: "Kenarlık ekle",
+          label: m.optionImageBorder,
           icon: "[]",
           selected: context.imageWithBorder === true,
           keywords: ["border", "kenarlik", "cerceve"],
@@ -492,7 +573,7 @@ export default function EditorField({
         {
           id: "image-stretched",
           kind: "imageStretched",
-          label: "Görseli genişlet",
+          label: m.optionImageStretch,
           icon: "<>",
           selected: context.imageStretched === true,
           keywords: ["stretch", "genislet", "tam genislik"],
@@ -500,7 +581,7 @@ export default function EditorField({
         {
           id: "image-with-background",
           kind: "imageWithBackground",
-          label: "Arka plan ekle",
+          label: m.optionImageBackground,
           icon: "##",
           selected: context.imageWithBackground === true,
           keywords: ["background", "arka plan"],
@@ -513,14 +594,14 @@ export default function EditorField({
       {
         id: "move-up",
         kind: "moveUp",
-        label: "Yukarı taşı",
+        label: m.optionMoveUp,
         icon: "^",
         keywords: ["yukari", "tas", "ust"],
       },
       {
         id: "delete",
         kind: "delete",
-        label: "Sil",
+        label: m.optionDelete,
         icon: "x",
         keywords: ["sil", "kaldir", "delete"],
         danger: true,
@@ -528,7 +609,7 @@ export default function EditorField({
       {
         id: "move-down",
         kind: "moveDown",
-        label: "Aşağı taşı",
+        label: m.optionMoveDown,
         icon: "v",
         keywords: ["asagi", "tas", "alt"],
       },
@@ -551,7 +632,7 @@ export default function EditorField({
       }
     });
     return filtered;
-  }, [blockMenuContext, blockMenuQuery]);
+  }, [blockMenuContext, blockMenuQuery, m]);
 
   const getBlockIndexFromElement = useCallback((blockEl: Element | null) => {
     if (!holderRef.current || !blockEl) {
@@ -1106,14 +1187,14 @@ export default function EditorField({
             class: quoteTool,
             inlineToolbar: true,
             config: {
-              quotePlaceholder: "Alıntıyı yazın",
-              captionPlaceholder: "Alıntı kaynağı (opsiyonel)",
+              quotePlaceholder: m.quotePlaceholder,
+              captionPlaceholder: m.quoteCaptionPlaceholder,
             },
           },
           code: {
             class: codeTool,
             config: {
-              placeholder: "Kodunuzu buraya yazın",
+              placeholder: m.codePlaceholder,
             },
           },
           image: {
@@ -1427,14 +1508,14 @@ export default function EditorField({
           className={`${styles.editorTab} ${activeTab === "editor" ? styles.editorTabActive : ""}`}
           onClick={() => setActiveTab("editor")}
         >
-          İçerik
+          {m.tabContent}
         </button>
         <button
           type="button"
           className={`${styles.editorTab} ${activeTab === "preview" ? styles.editorTabActive : ""}`}
           onClick={() => setActiveTab("preview")}
         >
-          Önizleme
+          {m.tabPreview}
         </button>
       </div>
 
@@ -1462,14 +1543,14 @@ export default function EditorField({
                 closeBlockMenu();
                 openMenuForBlock(activeBlockIndex);
               }}
-              aria-label="Blok ekle"
+              aria-label={m.addBlock}
             >
               +
             </button>
             <button
               type="button"
               className={styles.editorToolButton}
-              aria-label="Blok sürükle"
+              aria-label={m.dragBlock}
               onPointerDown={handleDragHandlePointerDown}
               onClick={(event) => {
                 event.preventDefault();
@@ -1486,9 +1567,9 @@ export default function EditorField({
               className={styles.editorCodeDone}
               style={{ top: codeButtonPosition.top, left: codeButtonPosition.left }}
               onClick={() => insertParagraphAfter(activeBlockIndex)}
-              title="Bloğu bitir"
+              title={m.finishBlock}
             >
-              Tamamla
+              {m.complete}
             </button>
           ) : null}
           {menuOpen && menuPosition ? (
@@ -1504,7 +1585,7 @@ export default function EditorField({
                 <input
                   ref={menuInputRef}
                   className={styles.editorMenuSearchInput}
-                  placeholder="Filtre"
+                  placeholder={m.filterPlaceholder}
                   value={menuQuery}
                   onChange={(event) => setMenuQuery(event.target.value)}
                   onKeyDown={(event) => {
@@ -1517,7 +1598,7 @@ export default function EditorField({
               </div>
               <div className={styles.editorMenuList}>
                 {filteredCommands.length === 0 ? (
-                  <div className={styles.editorMenuEmpty}>Sonuç bulunamadı.</div>
+                  <div className={styles.editorMenuEmpty}>{m.noResults}</div>
                 ) : (
                   filteredCommands.map((command) => (
                     <button
@@ -1552,7 +1633,7 @@ export default function EditorField({
                 <input
                   ref={blockMenuInputRef}
                   className={styles.editorMenuSearchInput}
-                  placeholder="Filtre"
+                  placeholder={m.filterPlaceholder}
                   value={blockMenuQuery}
                   onChange={(event) => setBlockMenuQuery(event.target.value)}
                   onKeyDown={(event) => {
@@ -1565,7 +1646,7 @@ export default function EditorField({
               </div>
               <div className={styles.editorBlockMenuList}>
                 {blockMenuOptions.length === 0 ? (
-                  <div className={styles.editorMenuEmpty}>Sonuç bulunamadı.</div>
+                  <div className={styles.editorMenuEmpty}>{m.noResults}</div>
                 ) : (
                   blockMenuOptions.map((option) => {
                     if (option.kind === "separator") {
@@ -1589,13 +1670,13 @@ export default function EditorField({
               </div>
             </div>
           ) : null}
-          {!isReady ? <p className={styles.editorHint}>Editör hazırlanıyor…</p> : null}
+          {!isReady ? <p className={styles.editorHint}>{m.preparing}</p> : null}
         </div>
 
         <aside className={`${styles.editorPreviewPane} ${activeTab === "preview" ? "" : styles.panelHidden}`}>
-          <p className={styles.editorPreviewTitle}>Canlı Önizleme</p>
+          <p className={styles.editorPreviewTitle}>{m.livePreview}</p>
           <div className={styles.markdownPreview}>
-            <EditorRenderer content={serialized} />
+            <EditorRenderer content={serialized} locale={locale} />
           </div>
         </aside>
       </div>

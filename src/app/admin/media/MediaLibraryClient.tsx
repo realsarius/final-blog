@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { interpolate } from "@/lib/i18n";
+import { interpolate } from "@/lib/interpolate";
 import styles from "./page.module.css";
 
 type MediaFile = {
@@ -40,6 +40,7 @@ type MediaMessages = {
 };
 
 type MediaLibraryClientProps = {
+  locale: "tr" | "en";
   messages: Readonly<MediaMessages>;
 };
 
@@ -59,7 +60,7 @@ type UploadDeleteResponse = ApiSuccess<{ file: { key: string; provider: "local" 
 type ViewMode = "grid" | "list";
 const MEDIA_FOLDERS = ["uploads", "covers", "content", "hero"] as const;
 
-function getDateLabel(updatedAt: string | null, messages: MediaMessages) {
+function getDateLabel(updatedAt: string | null, messages: MediaMessages, locale: "tr" | "en") {
   if (!updatedAt) {
     return messages.dateUnknown;
   }
@@ -67,7 +68,7 @@ function getDateLabel(updatedAt: string | null, messages: MediaMessages) {
   if (Number.isNaN(date.getTime())) {
     return messages.dateUnknown;
   }
-  return new Intl.DateTimeFormat("tr-TR", {
+  return new Intl.DateTimeFormat(locale === "en" ? "en-US" : "tr-TR", {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(date);
@@ -84,7 +85,7 @@ function getMonthKey(updatedAt: string | null) {
   return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
-function getMonthLabel(key: string, messages: MediaMessages) {
+function getMonthLabel(key: string, messages: MediaMessages, locale: "tr" | "en") {
   if (key === "unknown") {
     return messages.monthUnknown;
   }
@@ -95,7 +96,7 @@ function getMonthLabel(key: string, messages: MediaMessages) {
     return messages.monthUnknown;
   }
   const date = new Date(Date.UTC(year, month - 1, 1));
-  return new Intl.DateTimeFormat("tr-TR", { month: "long", year: "numeric" }).format(date);
+  return new Intl.DateTimeFormat(locale === "en" ? "en-US" : "tr-TR", { month: "long", year: "numeric" }).format(date);
 }
 
 function toNameFromKey(key: string) {
@@ -103,7 +104,7 @@ function toNameFromKey(key: string) {
   return decodeURIComponent(lastSegment);
 }
 
-export default function MediaLibraryClient({ messages }: MediaLibraryClientProps) {
+export default function MediaLibraryClient({ locale, messages }: MediaLibraryClientProps) {
   const [files, setFiles] = useState<MediaFile[]>([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -355,7 +356,7 @@ export default function MediaLibraryClient({ messages }: MediaLibraryClientProps
             <option value="all">{messages.allDates}</option>
             {dateOptions.map((option) => (
               <option key={option} value={option}>
-                {getMonthLabel(option, messages)}
+                {getMonthLabel(option, messages, locale)}
               </option>
             ))}
           </select>
@@ -404,7 +405,7 @@ export default function MediaLibraryClient({ messages }: MediaLibraryClientProps
                 <div className={styles.cardMeta}>
                   <p className={styles.cardName}>{toNameFromKey(file.key)}</p>
                   <p className={styles.cardSub}>
-                    {file.provider.toUpperCase()} · {getDateLabel(file.updatedAt, messages)}
+                    {file.provider.toUpperCase()} · {getDateLabel(file.updatedAt, messages, locale)}
                   </p>
                 </div>
               </article>
@@ -440,7 +441,7 @@ export default function MediaLibraryClient({ messages }: MediaLibraryClientProps
                       </div>
                     </td>
                     <td>{file.provider.toUpperCase()}</td>
-                    <td>{getDateLabel(file.updatedAt, messages)}</td>
+                    <td>{getDateLabel(file.updatedAt, messages, locale)}</td>
                   </tr>
                 );
               })}

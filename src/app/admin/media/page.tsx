@@ -10,7 +10,7 @@ export default async function AdminMediaPage() {
 
   return (
     <div className={styles.page}>
-      <MediaLibraryClient messages={messages.admin.media} />
+      <MediaLibraryClient locale={locale} messages={messages.admin.media} />
     </div>
   );
 }

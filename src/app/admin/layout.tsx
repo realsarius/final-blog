@@ -6,7 +6,6 @@ import SignOutButton from "@/components/admin/SignOutButton";
 import AdminToasts from "@/components/admin/AdminToasts";
 import AdminSidebarNav from "@/components/admin/AdminSidebarNav";
 import { getMessages, getServerLocale } from "@/lib/i18n";
-import LocaleSwitcher from "@/components/layout/LocaleSwitcher";
 
 export const metadata: Metadata = {
   title: "Admin",
@@ -46,7 +45,6 @@ export default async function AdminLayout({
         <header className={styles.topbar}>
           <span>{messages.admin.layout.panelTitle}</span>
           <div className={styles.topbarActions}>
-            <LocaleSwitcher currentLocale={locale} />
             <SignOutButton className={styles.signOut} label={messages.admin.layout.signOut} />
           </div>
         </header>

@@ -14,13 +14,24 @@ interface MarkdownFieldProps {
   name: string;
   defaultValue?: string;
   required?: boolean;
+  messages?: {
+    write: string;
+    preview: string;
+    emptyPreview: string;
+  };
 }
 
 export default function MarkdownField({
   name,
   defaultValue = "",
   required,
+  messages,
 }: MarkdownFieldProps) {
+  const m = messages ?? {
+    write: "Write",
+    preview: "Preview",
+    emptyPreview: "Write content to preview.",
+  };
   const [mode, setMode] = useState<"edit" | "preview">("edit");
   const [value, setValue] = useState(defaultValue);
 
@@ -40,14 +51,14 @@ export default function MarkdownField({
           onClick={() => setMode("edit")}
           className={`${styles.tabButton} ${mode === "edit" ? styles.tabButtonActive : ""}`}
         >
-          Yaz
+          {m.write}
         </button>
         <button
           type="button"
           onClick={() => setMode("preview")}
           className={`${styles.tabButton} ${mode === "preview" ? styles.tabButtonActive : ""}`}
         >
-          Önizleme
+          {m.preview}
         </button>
       </div>
 
@@ -65,7 +76,7 @@ export default function MarkdownField({
           dangerouslySetInnerHTML={{ __html: previewHtml }}
         />
       ) : (
-        <div className={styles.markdownPlaceholder}>Önizleme için içerik yazın.</div>
+        <div className={styles.markdownPlaceholder}>{m.emptyPreview}</div>
       )}
     </div>
   );

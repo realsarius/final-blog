@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { requireAdminSession } from "@/lib/adminAuth";
+import { getMessages, getServerLocale } from "@/lib/i18n";
+import { interpolate } from "@/lib/interpolate";
 import { prisma } from "@/lib/prisma";
 import styles from "./page.module.css";
 
@@ -11,8 +13,8 @@ type HealthItem = {
   detail: string;
 };
 
-function statusLabel(status: HealthStatus) {
-  return status === "good" ? "İyi" : "Dikkat";
+function statusLabel(status: HealthStatus, messages: { statusGood: string; statusWarn: string }) {
+  return status === "good" ? messages.statusGood : messages.statusWarn;
 }
 
 function hasR2Config() {
@@ -25,72 +27,89 @@ function hasR2Config() {
   );
 }
 
-async function getDatabaseHealth(): Promise<HealthItem> {
+async function getDatabaseHealth(messages: {
+  dbLabel: string;
+  dbDetailGood: string;
+  dbDetailWarn: string;
+}): Promise<HealthItem> {
   try {
     await prisma.$queryRaw`SELECT 1`;
     return {
-      label: "Veritabanı bağlantısı",
+      label: messages.dbLabel,
       status: "good",
-      detail: "Veritabanına bağlantı başarılı.",
+      detail: messages.dbDetailGood,
     };
   } catch {
     return {
-      label: "Veritabanı bağlantısı",
+      label: messages.dbLabel,
       status: "warn",
-      detail: "Veritabanı bağlantısı doğrulanamadı.",
+      detail: messages.dbDetailWarn,
     };
   }
 }
 
-function getR2Health(): HealthItem {
+function getR2Health(messages: {
+  r2Label: string;
+  r2DetailR2Good: string;
+  r2DetailAutoGood: string;
+  r2DetailR2Warn: string;
+  r2DetailWarn: string;
+}): HealthItem {
   const provider = (process.env.UPLOAD_PROVIDER ?? "local").trim().toLowerCase();
   const configured = hasR2Config();
   if (provider === "r2" && configured) {
     return {
-      label: "Cloudflare R2",
+      label: messages.r2Label,
       status: "good",
-      detail: "R2 aktif ve zorunlu değişkenler tanımlı.",
+      detail: messages.r2DetailR2Good,
     };
   }
   if (provider === "auto" && configured) {
     return {
-      label: "Cloudflare R2",
+      label: messages.r2Label,
       status: "good",
-      detail: "Auto modda R2 yapılandırması bulundu.",
+      detail: messages.r2DetailAutoGood,
     };
   }
   if (provider === "r2" && !configured) {
     return {
-      label: "Cloudflare R2",
+      label: messages.r2Label,
       status: "warn",
-      detail: "UPLOAD_PROVIDER=r2 ama R2 değişkenleri eksik.",
+      detail: messages.r2DetailR2Warn,
     };
   }
   return {
-    label: "Cloudflare R2",
+    label: messages.r2Label,
     status: "warn",
-    detail: "R2 aktif değil, yüklemeler local depoya düşebilir.",
+    detail: messages.r2DetailWarn,
   };
 }
 
-function getAuthHealth(): HealthItem {
+function getAuthHealth(messages: {
+  authLabel: string;
+  authDetailGood: string;
+  authDetailWarn: string;
+}): HealthItem {
   const hasAuthUrl = Boolean(process.env.NEXTAUTH_URL);
   return {
-    label: "Oturum yapılandırması",
+    label: messages.authLabel,
     status: hasAuthUrl ? "good" : "warn",
     detail: hasAuthUrl
-      ? "NEXTAUTH_URL tanımlı."
-      : "NEXTAUTH_URL bulunamadı.",
+      ? messages.authDetailGood
+      : messages.authDetailWarn,
   };
 }
 
 export default async function AdminSiteHealthPage() {
   await requireAdminSession("/admin/tools/site-health");
+  const locale = await getServerLocale();
+  const messages = await getMessages(locale);
+  const t = messages.admin.siteHealth;
 
   const checks: HealthItem[] = [
-    await getDatabaseHealth(),
-    getR2Health(),
-    getAuthHealth(),
+    await getDatabaseHealth(t),
+    getR2Health(t),
+    getAuthHealth(t),
   ];
 
   const warnCount = checks.filter((item) => item.status === "warn").length;
@@ -98,21 +117,21 @@ export default async function AdminSiteHealthPage() {
   return (
     <div className={styles.page}>
       <header className={styles.header}>
-        <h1>Site Sağlığı</h1>
+        <h1>{t.title}</h1>
         <p>
-          Sistem durumu kontrolü. {warnCount === 0 ? "Her şey stabil görünüyor." : `${warnCount} uyarı var.`}
+          {warnCount === 0 ? t.subtitleStable : interpolate(t.subtitleWarn, { count: warnCount })}
         </p>
       </header>
 
       <section className={styles.hero}>
         <div>
-          <p className={styles.heroLabel}>Genel Durum</p>
-          <h2>{warnCount === 0 ? "Siteniz iyi durumda" : "Bazı iyileştirmeler gerekli"}</h2>
+          <p className={styles.heroLabel}>{t.heroLabel}</p>
+          <h2>{warnCount === 0 ? t.heroTitleGood : t.heroTitleWarn}</h2>
           <p>
-            Temel altyapı kontrolü tamamlandı. Ayrıntıları aşağıdaki kartlarda görebilirsin.
+            {t.heroDescription}
           </p>
           <Link href="/admin/tools" className={styles.heroAction}>
-            Araçlara geri dön
+            {t.backToTools}
           </Link>
         </div>
       </section>
@@ -123,7 +142,7 @@ export default async function AdminSiteHealthPage() {
             <div className={styles.cardTop}>
               <h3>{item.label}</h3>
               <span className={item.status === "good" ? styles.good : styles.warn}>
-                {statusLabel(item.status)}
+                {statusLabel(item.status, t)}
               </span>
             </div>
             <p>{item.detail}</p>
