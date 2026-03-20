@@ -43,12 +43,30 @@ export default async function HomePage() {
       categories: { include: { category: true } },
     },
   });
-  const availablePostsPromise = prisma.post.findMany({
+  const featuredPostsPromise = prisma.post.findMany({
     where: {
       status: "PUBLISHED",
+      featured: true,
+      coverImageUrl: { not: null },
     },
     orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
-    take: 40,
+    take: 20,
+    select: {
+      id: true,
+      title: true,
+      slug: true,
+      excerpt: true,
+      coverImageUrl: true,
+      featured: true,
+    },
+  });
+  const fallbackHeroPostsPromise = prisma.post.findMany({
+    where: {
+      status: "PUBLISHED",
+      coverImageUrl: { not: null },
+    },
+    orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
+    take: 10,
     select: {
       id: true,
       title: true,
@@ -59,10 +77,11 @@ export default async function HomePage() {
     },
   });
 
-  const [session, posts, availablePosts] = await Promise.all([
+  const [session, posts, featuredPosts, fallbackHeroPosts] = await Promise.all([
     sessionPromise,
     postsPromise,
-    availablePostsPromise,
+    featuredPostsPromise,
+    fallbackHeroPostsPromise,
   ]);
   const isAdmin = session?.user?.role === "ADMIN";
 
@@ -129,7 +148,7 @@ export default async function HomePage() {
   }
   persistedHeroConfig = heroConfigResult;
 
-  const fallbackSlides = availablePosts
+  const fallbackSlides = featuredPosts
     .filter((post) => post.featured && post.coverImageUrl)
     .map((post) => ({
       imageUrl: post.coverImageUrl ?? "",
@@ -152,9 +171,9 @@ export default async function HomePage() {
       postExcerpt: slide.post?.excerpt ?? null,
       postCoverImageUrl: slide.post?.coverImageUrl ?? null,
     }))
-    : (fallbackSlides.length > 0
+      : (fallbackSlides.length > 0
       ? fallbackSlides
-      : availablePosts.filter((post) => Boolean(post.coverImageUrl)).slice(0, 5).map((post) => ({
+      : fallbackHeroPosts.slice(0, 5).map((post) => ({
         imageUrl: post.coverImageUrl ?? "",
         postId: post.id,
         postTitle: post.title,
@@ -192,7 +211,7 @@ export default async function HomePage() {
         <HomeHeroOverlay
           initialSlides={heroSlides}
           initialSettings={heroSettings}
-          availablePosts={availablePosts}
+          initialPostOptions={featuredPosts.slice(0, 12)}
           isAdmin={isAdmin}
           locale={locale}
         />

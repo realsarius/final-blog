@@ -37,6 +37,7 @@ type MediaMessages = {
   deleted: string;
   dateUnknown: string;
   monthUnknown: string;
+  closePreview: string;
 };
 
 type MediaLibraryClientProps = {
@@ -115,6 +116,7 @@ export default function MediaLibraryClient({ locale, messages }: MediaLibraryCli
   const [search, setSearch] = useState("");
   const [dateFilter, setDateFilter] = useState("all");
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
+  const [previewFile, setPreviewFile] = useState<MediaFile | null>(null);
   const addInputRef = useRef<HTMLInputElement>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
 
@@ -284,6 +286,27 @@ export default function MediaLibraryClient({ locale, messages }: MediaLibraryCli
     void refresh();
   }, [refresh]);
 
+  useEffect(() => {
+    if (!previewFile) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setPreviewFile(null);
+      }
+    };
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [previewFile]);
+
   return (
     <section className={styles.mediaPage}>
       <header className={styles.header}>
@@ -401,7 +424,13 @@ export default function MediaLibraryClient({ locale, messages }: MediaLibraryCli
                 <label className={styles.cardCheckbox}>
                   <input type="checkbox" checked={checked} onChange={() => toggleSelect(file.key)} />
                 </label>
-                <img src={file.url} alt={toNameFromKey(file.key)} className={styles.cardImage} loading="lazy" />
+                <img
+                  src={file.url}
+                  alt={toNameFromKey(file.key)}
+                  className={styles.cardImage}
+                  loading="lazy"
+                  onClick={() => setPreviewFile(file)}
+                />
                 <div className={styles.cardMeta}>
                   <p className={styles.cardName}>{toNameFromKey(file.key)}</p>
                   <p className={styles.cardSub}>
@@ -433,7 +462,14 @@ export default function MediaLibraryClient({ locale, messages }: MediaLibraryCli
                     </td>
                     <td>
                       <div className={styles.listFile}>
-                        <img src={file.url} alt={toNameFromKey(file.key)} loading="lazy" />
+                        <button
+                          type="button"
+                          className={styles.listPreviewButton}
+                          onClick={() => setPreviewFile(file)}
+                          aria-label={toNameFromKey(file.key)}
+                        >
+                          <img src={file.url} alt={toNameFromKey(file.key)} loading="lazy" />
+                        </button>
                         <div>
                           <p>{toNameFromKey(file.key)}</p>
                           <small>{file.key}</small>
@@ -449,6 +485,32 @@ export default function MediaLibraryClient({ locale, messages }: MediaLibraryCli
           </table>
         </div>
       )}
+      {previewFile ? (
+        <div
+          className={styles.previewOverlay}
+          onClick={(event) => {
+            if (event.target === event.currentTarget) {
+              setPreviewFile(null);
+            }
+          }}
+        >
+          <div className={styles.previewModal}>
+            <button
+              type="button"
+              className={styles.previewClose}
+              onClick={() => setPreviewFile(null)}
+              aria-label={messages.closePreview}
+            >
+              ×
+            </button>
+            <img
+              src={previewFile.url}
+              alt={toNameFromKey(previewFile.key)}
+              className={styles.previewImage}
+            />
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }

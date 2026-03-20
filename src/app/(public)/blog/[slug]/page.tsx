@@ -16,13 +16,18 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const locale = await getServerLocale();
+  const session = await getServerSession(authOptions);
+  const isAdmin = session?.user?.role === "ADMIN";
   const { slug } = await params;
-  const post = await prisma.post.findUnique({
-    where: { slug },
+  const post = await prisma.post.findFirst({
+    where: {
+      slug,
+      ...(isAdmin ? {} : { status: "PUBLISHED" }),
+    },
     select: { title: true, excerpt: true, status: true },
   });
 
-  if (!post || post.status !== "PUBLISHED") {
+  if (!post) {
     return { title: locale === "en" ? "Post not found" : "Yazı bulunamadı" };
   }
 
@@ -34,13 +39,17 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function BlogDetailPage({ params }: PageProps) {
   const locale = await getServerLocale();
+  const session = await getServerSession(authOptions);
+  const isAdmin = session?.user?.role === "ADMIN";
   const t = locale === "en"
     ? { edit: "Edit", tags: "Tags:" }
     : { edit: "Düzenle", tags: "Etiketler:" };
   const { slug } = await params;
-  const session = await getServerSession(authOptions);
-  const post = await prisma.post.findUnique({
-    where: { slug },
+  const post = await prisma.post.findFirst({
+    where: {
+      slug,
+      ...(isAdmin ? {} : { status: "PUBLISHED" }),
+    },
     include: {
       categories: { include: { category: true } },
       tags: { include: { tag: true } },
@@ -48,7 +57,7 @@ export default async function BlogDetailPage({ params }: PageProps) {
     },
   });
 
-  if (!post || post.status !== "PUBLISHED") {
+  if (!post) {
     notFound();
   }
 
@@ -62,7 +71,7 @@ export default async function BlogDetailPage({ params }: PageProps) {
         <header className={styles.header}>
           <div className={styles.titleRow}>
             <h1>{post.title}</h1>
-            {session && (
+            {isAdmin && (
               <Link href={`/admin/posts/${post.id}/edit`} className={styles.editLink}>
                 {t.edit}
               </Link>

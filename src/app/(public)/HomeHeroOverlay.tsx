@@ -85,7 +85,7 @@ type HeroSettings = {
 interface HomeHeroOverlayProps {
   initialSlides: HeroSlide[];
   initialSettings: HeroSettings;
-  availablePosts: PostOption[];
+  initialPostOptions: PostOption[];
   isAdmin: boolean;
   locale?: "tr" | "en";
 }
@@ -122,7 +122,7 @@ function normalizeHexColor(value: unknown) {
 export default function HomeHeroOverlay({
   initialSlides,
   initialSettings,
-  availablePosts,
+  initialPostOptions,
   isAdmin,
   locale = "tr",
 }: HomeHeroOverlayProps) {
@@ -169,6 +169,13 @@ export default function HomeHeroOverlay({
       slideLeft: "Slide left",
       slideRight: "Slide right",
       postSelection: "Post Selection & Featured",
+      postSearch: "Search posts",
+      postSearchPlaceholder: "Search by title, summary, or slug",
+      postListLoading: "Posts are loading...",
+      postListEmpty: "No post found for this filter.",
+      prevPage: "Prev",
+      nextPage: "Next",
+      pageLabel: "Page {page} / {total}",
       removeFeatured: "Remove Featured",
       makeFeatured: "Make Featured",
       r2Images: "R2 Images",
@@ -225,6 +232,13 @@ export default function HomeHeroOverlay({
       slideLeft: "Sola kay",
       slideRight: "Saga kay",
       postSelection: "Yazi Secimi ve Featured",
+      postSearch: "Yazi ara",
+      postSearchPlaceholder: "Baslik, ozet veya slug ile ara",
+      postListLoading: "Yazilar yukleniyor...",
+      postListEmpty: "Bu filtreye uygun yazi bulunamadi.",
+      prevPage: "Onceki",
+      nextPage: "Sonraki",
+      pageLabel: "Sayfa {page} / {total}",
       removeFeatured: "Featured Kaldir",
       makeFeatured: "Featured Yap",
       r2Images: "R2 Gorselleri",
@@ -246,10 +260,14 @@ export default function HomeHeroOverlay({
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingLibrary, setIsLoadingLibrary] = useState(false);
+  const [isLoadingPosts, setIsLoadingPosts] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [libraryError, setLibraryError] = useState<string | null>(null);
   const [libraryImages, setLibraryImages] = useState<UploadListItem[]>([]);
-  const [posts, setPosts] = useState<PostOption[]>(availablePosts);
+  const [posts, setPosts] = useState<PostOption[]>(initialPostOptions);
+  const [postQuery, setPostQuery] = useState("");
+  const [postPage, setPostPage] = useState(1);
+  const [postTotalPages, setPostTotalPages] = useState(1);
   const [selectedPostId, setSelectedPostId] = useState<string>("");
   const [selectedImageUrl, setSelectedImageUrl] = useState<string>("");
   const [markAsFeatured, setMarkAsFeatured] = useState(true);
@@ -263,15 +281,22 @@ export default function HomeHeroOverlay({
   const [colorLoadingIndex, setColorLoadingIndex] = useState<number | null>(null);
   const paletteCacheRef = useRef<Record<string, { left: string; right: string }>>({});
   const palettePendingRef = useRef<Record<string, Promise<{ left: string; right: string }>>>({});
+  const postRequestRef = useRef(0);
   const autoplayDirectionRef = useRef<HeroTransitionDirection>(sanitizeDirection(initialSettings.transitionDirection));
   const touchStartXRef = useRef<number | null>(null);
   const touchStartYRef = useRef<number | null>(null);
+  const [postCache, setPostCache] = useState<Record<string, PostOption>>(() => {
+    return initialPostOptions.reduce<Record<string, PostOption>>((acc, post) => {
+      acc[post.id] = post;
+      return acc;
+    }, {});
+  });
 
   const activeSlide = slides[activeIndex] ?? null;
   const carouselSlides = useMemo(() => slides, [slides]);
   const selectedPost = useMemo(
-    () => posts.find((post) => post.id === selectedPostId) ?? null,
-    [posts, selectedPostId],
+    () => (selectedPostId ? postCache[selectedPostId] ?? null : null),
+    [postCache, selectedPostId],
   );
 
   const runRewindToStart = useCallback(() => {
@@ -615,6 +640,72 @@ export default function HomeHeroOverlay({
     };
   }, [deriveTitleColorsFromImageCached, slides]);
 
+  const loadPosts = useCallback(async (page: number, query: string) => {
+    if (!isAdmin) {
+      return;
+    }
+
+    const requestId = postRequestRef.current + 1;
+    postRequestRef.current = requestId;
+    setIsLoadingPosts(true);
+
+    try {
+      const response = await fetch(
+        `/api/admin/posts/options?page=${page}&limit=12&q=${encodeURIComponent(query)}`,
+        {
+          method: "GET",
+          credentials: "same-origin",
+        },
+      );
+
+      const data = await response.json() as {
+        ok?: boolean;
+        items?: PostOption[];
+        totalPages?: number;
+      };
+
+      if (!response.ok || data.ok !== true || !Array.isArray(data.items)) {
+        throw new Error("Failed to load post options");
+      }
+      if (postRequestRef.current !== requestId) {
+        return;
+      }
+
+      setPosts(data.items);
+      setPostTotalPages(Math.max(1, Number(data.totalPages) || 1));
+      setPostCache((current) => {
+        const next = { ...current };
+        data.items.forEach((item) => {
+          next[item.id] = item;
+        });
+        return next;
+      });
+    } catch {
+      if (postRequestRef.current !== requestId) {
+        return;
+      }
+      setPosts([]);
+      setPostTotalPages(1);
+    } finally {
+      if (postRequestRef.current === requestId) {
+        setIsLoadingPosts(false);
+      }
+    }
+  }, [isAdmin]);
+
+  useEffect(() => {
+    if (!isAdmin || !isEditorOpen) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      void loadPosts(postPage, postQuery);
+    }, postQuery ? 240 : 0);
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [isAdmin, isEditorOpen, loadPosts, postPage, postQuery]);
+
   async function loadLibrary(folder = libraryFolder) {
     if (!isAdmin) {
       return;
@@ -670,6 +761,19 @@ export default function HomeHeroOverlay({
     setPosts((current) => current.map((post) => (
       post.id === postId ? { ...post, featured } : post
     )));
+    setPostCache((current) => {
+      const post = current[postId];
+      if (!post) {
+        return current;
+      }
+      return {
+        ...current,
+        [postId]: {
+          ...post,
+          featured,
+        },
+      };
+    });
   }
 
   async function addComposedSlide() {
@@ -968,6 +1072,11 @@ export default function HomeHeroOverlay({
                       onChange={(event) => setSelectedPostId(event.target.value)}
                     >
                       <option value="">{t.imageOnly}</option>
+                      {selectedPost && !posts.some((post) => post.id === selectedPost.id) ? (
+                        <option value={selectedPost.id}>
+                          {selectedPost.title}{selectedPost.featured ? " (featured)" : ""}
+                        </option>
+                      ) : null}
                       {posts.map((post) => (
                         <option key={post.id} value={post.id}>
                           {post.title}{post.featured ? " (featured)" : ""}
@@ -1096,7 +1205,25 @@ export default function HomeHeroOverlay({
 
                 <div className={styles.heroEditorBlock}>
                   <h4>{t.postSelection}</h4>
+                  <div className={styles.heroComposerRow}>
+                    <label htmlFor="hero-post-search">{t.postSearch}</label>
+                    <input
+                      id="hero-post-search"
+                      type="search"
+                      className={styles.heroInput}
+                      value={postQuery}
+                      placeholder={t.postSearchPlaceholder}
+                      onChange={(event) => {
+                        setPostQuery(event.target.value);
+                        setPostPage(1);
+                      }}
+                    />
+                  </div>
                   <div className={styles.heroPostList}>
+                    {isLoadingPosts ? <p className={styles.heroPostListState}>{t.postListLoading}</p> : null}
+                    {!isLoadingPosts && posts.length === 0 ? (
+                      <p className={styles.heroPostListState}>{t.postListEmpty}</p>
+                    ) : null}
                     {posts.map((post) => (
                       <div key={post.id} className={styles.heroPostRow}>
                         <button type="button" onClick={() => setSelectedPostId(post.id)}>{post.title}</button>
@@ -1110,6 +1237,23 @@ export default function HomeHeroOverlay({
                         </button>
                       </div>
                     ))}
+                  </div>
+                  <div className={styles.heroPostPagination}>
+                    <button
+                      type="button"
+                      onClick={() => setPostPage((current) => Math.max(1, current - 1))}
+                      disabled={isLoadingPosts || postPage <= 1}
+                    >
+                      {t.prevPage}
+                    </button>
+                    <span>{t.pageLabel.replace("{page}", String(postPage)).replace("{total}", String(postTotalPages))}</span>
+                    <button
+                      type="button"
+                      onClick={() => setPostPage((current) => Math.min(postTotalPages, current + 1))}
+                      disabled={isLoadingPosts || postPage >= postTotalPages}
+                    >
+                      {t.nextPage}
+                    </button>
                   </div>
                 </div>
 
