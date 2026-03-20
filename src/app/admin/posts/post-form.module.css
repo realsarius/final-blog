@@ -690,6 +690,11 @@
   z-index: 6;
 }
 
+.taxonomyMenuUp {
+  top: auto;
+  bottom: calc(100% + 6px);
+}
+
 .taxonomyOption {
   text-align: left;
   border: none;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import styles from "./post-form.module.css";
 
 interface TaxonomyPickerProps {
@@ -24,6 +24,7 @@ export default function TaxonomyPicker({
 }: TaxonomyPickerProps) {
   const [query, setQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
+  const [openUpward, setOpenUpward] = useState(false);
   const [selected, setSelected] = useState<string[]>(() =>
     Array.from(
       new Map(
@@ -36,6 +37,7 @@ export default function TaxonomyPicker({
   );
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const handlePointerDown = (event: PointerEvent) => {
@@ -47,6 +49,36 @@ export default function TaxonomyPicker({
     document.addEventListener("pointerdown", handlePointerDown);
     return () => document.removeEventListener("pointerdown", handlePointerDown);
   }, []);
+
+  const updateMenuDirection = useCallback(() => {
+    const wrapper = wrapperRef.current;
+    if (!wrapper) return;
+
+    const rect = wrapper.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+    const menuHeight = menuRef.current?.offsetHeight ?? 220;
+    const preferredGap = 6;
+    const neededSpace = Math.min(menuHeight, 220) + preferredGap;
+    const shouldOpenUpward = spaceBelow < neededSpace && spaceAbove > spaceBelow;
+
+    setOpenUpward(shouldOpenUpward);
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const initialFrame = requestAnimationFrame(() => updateMenuDirection());
+    const handleViewportChange = () => updateMenuDirection();
+    window.addEventListener("resize", handleViewportChange);
+    window.addEventListener("scroll", handleViewportChange, true);
+
+    return () => {
+      cancelAnimationFrame(initialFrame);
+      window.removeEventListener("resize", handleViewportChange);
+      window.removeEventListener("scroll", handleViewportChange, true);
+    };
+  }, [isOpen, selected, query, options, updateMenuDirection]);
 
   const normalizedSelected = useMemo(
     () => new Set(selected.map((item) => normalize(item))),
@@ -127,7 +159,11 @@ export default function TaxonomyPicker({
         />
       </div>
       {isOpen ? (
-        <div className={styles.taxonomyMenu} role="listbox">
+        <div
+          ref={menuRef}
+          className={`${styles.taxonomyMenu} ${openUpward ? styles.taxonomyMenuUp : ""}`}
+          role="listbox"
+        >
           {filteredOptions.map((item) => (
             <button
               key={item}
