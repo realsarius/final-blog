@@ -1,5 +1,7 @@
 # FinalBlog Platform
 
+[Türkçe README](./README.md) | [English README](./README.en.md)
+
 ## İçindekiler
 
 - [0. Hızlı Kurulum](#0-hızlı-kurulum)
