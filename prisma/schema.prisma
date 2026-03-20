@@ -173,6 +173,8 @@ model SiteSettings {
   timeFormat      String?
   weekStartsOn    String?
   language        String?
+  aboutContentTr  String?
+  aboutContentEn  String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }
