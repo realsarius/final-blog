@@ -159,3 +159,20 @@ model PostView {
 
   @@index([postId])
 }
+
+model SiteSettings {
+  id              String   @id @default("default")
+  siteName        String?
+  siteDescription String?
+  siteUrl         String?
+  adminEmail      String?
+  adminFirstName  String?
+  adminLastName   String?
+  timezone        String?
+  dateFormat      String?
+  timeFormat      String?
+  weekStartsOn    String?
+  language        String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
