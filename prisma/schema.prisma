@@ -178,3 +178,20 @@ model SiteSettings {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  channel    String   @default("security")
+  event      String
+  severity   String   @default("info")
+  requestId  String?
+  actorUserId String?
+  path       String?
+  ipAddress  String?
+  context    Json?
+  createdAt  DateTime @default(now())
+
+  @@index([channel, createdAt])
+  @@index([event, createdAt])
+  @@index([actorUserId, createdAt])
+}

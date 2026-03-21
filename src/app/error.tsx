@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useDocumentLocale } from "@/lib/client/useDocumentLocale";
 import styles from "./error.module.css";
 
 export default function ErrorPage({
@@ -11,12 +11,7 @@ export default function ErrorPage({
   error: Error;
   reset: () => void;
 }) {
-  const [locale, setLocale] = useState<"tr" | "en">("tr");
-
-  useEffect(() => {
-    const htmlLang = document.documentElement.lang;
-    setLocale(htmlLang === "en" ? "en" : "tr");
-  }, []);
+  const locale = useDocumentLocale();
 
   const t = locale === "en"
     ? {

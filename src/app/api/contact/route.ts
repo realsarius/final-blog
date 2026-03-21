@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { Resend } from "resend";
+import { captureException } from "@/lib/errorTracking";
 import { parsePositiveInt } from "@/lib/parsing";
 import { getClientIp, rateLimit } from "@/lib/rateLimit";
 import { getResolvedSiteSettings } from "@/lib/siteSettings";
@@ -161,7 +162,8 @@ export async function POST(request: Request) {
       html: buildHtmlEmail(data),
     });
     return NextResponse.json({ ok: true });
-  } catch {
+  } catch (error) {
+    captureException(error, { event: "contact_email_send_failed", to, from });
     return NextResponse.json({ ok: false, error: "Mesaj gönderilemedi. Lütfen tekrar deneyin." }, { status: 502 });
   }
 }
