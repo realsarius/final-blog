@@ -108,7 +108,7 @@ services:
     profiles:
       - prod
     ports:
-      - "127.0.0.1:${DATABASE_PROD_PORT:-5434}:5432"
+      - "127.0.0.1:${DATABASE_PROD_PORT:-15434}:5432"
     environment:
       POSTGRES_DB: ${DATABASE_PROD_NAME}
       POSTGRES_USER: ${DATABASE_PROD_USER}
