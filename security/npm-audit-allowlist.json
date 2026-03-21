@@ -1,0 +1,16 @@
+{
+  "reason": "Temporary exception for Prisma 7.5.0 upstream advisory chain",
+  "expiresOn": "2026-05-31",
+  "minimumFailSeverity": "high",
+  "allowedPackages": [
+    "prisma",
+    "@prisma/config",
+    "@prisma/dev",
+    "effect",
+    "@mrleebo/prisma-ast",
+    "chevrotain",
+    "@chevrotain/cst-dts-gen",
+    "@chevrotain/gast",
+    "lodash"
+  ]
+}

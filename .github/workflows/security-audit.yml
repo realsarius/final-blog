@@ -25,5 +25,8 @@ jobs:
       - name: Install
         run: npm ci
 
-      - name: Audit High And Critical
-        run: npm run audit:high
+      - name: Secret Scan (Tracked Files)
+        run: npm run security:secrets
+
+      - name: Audit High And Critical (Policy Filtered)
+        run: npm run audit:ci

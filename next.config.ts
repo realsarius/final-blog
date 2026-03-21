@@ -1,5 +1,7 @@
 import type { NextConfig } from "next";
 
+const isProd = process.env.NODE_ENV === "production";
+
 const securityHeaders = [
   { key: "X-Frame-Options", value: "DENY" },
   { key: "X-Content-Type-Options", value: "nosniff" },
@@ -15,7 +17,9 @@ const securityHeaders = [
       "img-src 'self' data: blob: https:",
       "font-src 'self' https: data:",
       "style-src 'self' 'unsafe-inline' https:",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https:",
+      isProd
+        ? "script-src 'self' 'unsafe-inline' https:"
+        : "script-src 'self' 'unsafe-inline' 'unsafe-eval' https:",
       "connect-src 'self' https:",
       "form-action 'self'",
     ].join("; "),
