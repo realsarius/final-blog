@@ -378,6 +378,7 @@ const en = {
       established: "Est. 2026",
       brand: "Berkan's Notes",
       contact: "Contact",
+      adminPanel: "Admin Panel",
     },
   },
 } as const;

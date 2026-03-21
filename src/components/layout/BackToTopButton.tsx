@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useDocumentLocale } from "@/lib/client/useDocumentLocale";
 import styles from "./BackToTopButton.module.css";
 
 interface BackToTopButtonProps {
@@ -9,7 +10,7 @@ interface BackToTopButtonProps {
 
 export default function BackToTopButton({ threshold = 520 }: BackToTopButtonProps) {
   const [isVisible, setIsVisible] = useState(false);
-  const [locale, setLocale] = useState<"tr" | "en">("tr");
+  const locale = useDocumentLocale();
 
   useEffect(() => {
     const sync = () => {
@@ -20,11 +21,6 @@ export default function BackToTopButton({ threshold = 520 }: BackToTopButtonProp
     window.addEventListener("scroll", sync, { passive: true });
     return () => window.removeEventListener("scroll", sync);
   }, [threshold]);
-
-  useEffect(() => {
-    const htmlLang = document.documentElement.lang;
-    setLocale(htmlLang === "en" ? "en" : "tr");
-  }, []);
 
   return (
     <button

@@ -2,8 +2,9 @@
 
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useState } from "react";
 import { toast } from "sonner";
+import { useDocumentLocale } from "@/lib/client/useDocumentLocale";
 import styles from "./page.module.css";
 import Link from "next/link";
 
@@ -16,12 +17,7 @@ function LoginContent() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [locale, setLocale] = useState<"tr" | "en">("tr");
-
-  useEffect(() => {
-    const htmlLang = document.documentElement.lang;
-    setLocale(htmlLang === "en" ? "en" : "tr");
-  }, []);
+  const locale = useDocumentLocale();
 
   const t = locale === "en"
     ? {

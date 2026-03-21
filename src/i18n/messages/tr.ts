@@ -378,6 +378,7 @@ const tr = {
       established: "Est. 2026",
       brand: "Berkan'ın Notları",
       contact: "İletişim",
+      adminPanel: "Yönetim Paneli",
     },
   },
 } as const;
