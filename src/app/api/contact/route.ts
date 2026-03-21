@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { Resend } from "resend";
+import { parsePositiveInt } from "@/lib/parsing";
 import { getClientIp, rateLimit } from "@/lib/rateLimit";
 import { getResolvedSiteSettings } from "@/lib/siteSettings";
 
@@ -29,11 +30,6 @@ function escapeHtml(value: string) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
-}
-
-function parsePositiveInt(value: string | undefined, fallback: number) {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : fallback;
 }
 
 async function resolveRecipientEmail() {

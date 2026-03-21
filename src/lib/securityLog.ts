@@ -1,3 +1,5 @@
+import { parseBoolean } from "@/lib/parsing";
+
 type SecuritySeverity = "info" | "warn" | "error";
 
 type SecurityLogPayload = {
@@ -5,20 +7,6 @@ type SecurityLogPayload = {
   severity?: SecuritySeverity;
   context?: Record<string, unknown>;
 };
-
-function parseBoolean(value: string | undefined, fallback: boolean) {
-  if (value === undefined) {
-    return fallback;
-  }
-  const normalized = value.trim().toLowerCase();
-  if (["1", "true", "yes", "on"].includes(normalized)) {
-    return true;
-  }
-  if (["0", "false", "no", "off"].includes(normalized)) {
-    return false;
-  }
-  return fallback;
-}
 
 function shouldLogSecurityEvents() {
   return parseBoolean(process.env.SECURITY_LOG_ENABLED, true);

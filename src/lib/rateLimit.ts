@@ -1,4 +1,5 @@
 import { createClient } from "redis";
+import { parseBoolean } from "@/lib/parsing";
 
 const DEFAULT_WINDOW_SECONDS = Number(process.env.RATE_LIMIT_WINDOW_SEC ?? 900);
 const DEFAULT_MAX_ATTEMPTS = Number(process.env.RATE_LIMIT_MAX ?? 5);
@@ -39,20 +40,6 @@ type RateLimitOptions = {
   maxAttempts?: number;
   namespace?: string;
 };
-
-function parseBoolean(value: string | undefined, fallback: boolean) {
-  if (value === undefined) {
-    return fallback;
-  }
-  const normalized = value.trim().toLowerCase();
-  if (["1", "true", "yes", "on"].includes(normalized)) {
-    return true;
-  }
-  if (["0", "false", "no", "off"].includes(normalized)) {
-    return false;
-  }
-  return fallback;
-}
 
 function toPositiveInteger(value: unknown, fallback: number) {
   const parsed = Number(value);
