@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import { optimizeImageForUpload } from "@/lib/client/optimizeImageUpload";
 import { interpolate } from "@/lib/interpolate";
 import styles from "./page.module.css";
@@ -426,9 +427,13 @@ export default function MediaLibraryClient({ locale, messages }: MediaLibraryCli
                 <label className={styles.cardCheckbox}>
                   <input type="checkbox" checked={checked} onChange={() => toggleSelect(file.key)} />
                 </label>
-                <img
+                <Image
                   src={file.url}
                   alt={toNameFromKey(file.key)}
+                  width={640}
+                  height={640}
+                  sizes="(max-width: 980px) 45vw, 190px"
+                  unoptimized
                   className={styles.cardImage}
                   loading="lazy"
                   onClick={() => setPreviewFile(file)}
@@ -470,7 +475,16 @@ export default function MediaLibraryClient({ locale, messages }: MediaLibraryCli
                           onClick={() => setPreviewFile(file)}
                           aria-label={toNameFromKey(file.key)}
                         >
-                          <img src={file.url} alt={toNameFromKey(file.key)} loading="lazy" />
+                          <Image
+                            src={file.url}
+                            alt={toNameFromKey(file.key)}
+                            width={44}
+                            height={44}
+                            sizes="44px"
+                            unoptimized
+                            className={styles.listThumb}
+                            loading="lazy"
+                          />
                         </button>
                         <div>
                           <p>{toNameFromKey(file.key)}</p>
@@ -505,9 +519,13 @@ export default function MediaLibraryClient({ locale, messages }: MediaLibraryCli
             >
               ×
             </button>
-            <img
+            <Image
               src={previewFile.url}
               alt={toNameFromKey(previewFile.key)}
+              width={1600}
+              height={1200}
+              sizes="96vw"
+              unoptimized
               className={styles.previewImage}
             />
           </div>

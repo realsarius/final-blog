@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { parseBoolean } from "@/lib/parsing";
+import { getOrCreateRequestId, REQUEST_ID_HEADER } from "@/lib/requestId";
 import { CORS_HEADERS, CORS_METHODS } from "@/lib/upload/constants";
 
 function parseOrigin(value: string | null | undefined): string | null {
@@ -65,6 +66,7 @@ export function withCors(request: Request, response: NextResponse) {
   Object.entries(corsHeaders).forEach(([key, value]) => {
     response.headers.set(key, value);
   });
+  response.headers.set(REQUEST_ID_HEADER, getOrCreateRequestId(request.headers));
   return response;
 }
 

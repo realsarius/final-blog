@@ -264,7 +264,7 @@
   align-items: center;
 }
 
-.listFile img {
+.listThumb {
   width: 44px;
   height: 44px;
   object-fit: cover;

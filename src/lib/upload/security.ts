@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { parseBoolean, parsePositiveInt } from "@/lib/parsing";
+import { getOrCreateRequestId } from "@/lib/requestId";
 import { getClientIp, rateLimit } from "@/lib/rateLimit";
 import { logSecurityEvent } from "@/lib/securityLog";
 
@@ -70,6 +71,7 @@ export async function enforceUploadRateLimit(request: Request, userId: string | 
   }
 
   const ip = getClientIp({ headers: request.headers });
+  const requestId = getOrCreateRequestId(request.headers);
   const limiterKey = userId ? `user:${userId}` : `ip:${ip}`;
   const limiter = await rateLimit(limiterKey, {
     namespace,
@@ -84,6 +86,8 @@ export async function enforceUploadRateLimit(request: Request, userId: string | 
   logSecurityEvent({
     event: "upload_rate_limited",
     severity: "warn",
+    requestId,
+    actorUserId: userId ?? undefined,
     context: { namespace, userId, ip },
   });
   const retryAfterSeconds = Math.max(1, Math.ceil((limiter.reset - Date.now()) / 1000));
@@ -92,6 +96,7 @@ export async function enforceUploadRateLimit(request: Request, userId: string | 
     {
       status: 429,
       headers: {
+        "X-Request-Id": requestId,
         "Retry-After": String(retryAfterSeconds),
         "X-RateLimit-Limit": String(rateLimitMax),
         "X-RateLimit-Remaining": String(limiter.remaining),
