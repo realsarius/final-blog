@@ -7,8 +7,9 @@ import { getClientIp, rateLimit } from "@/lib/rateLimit";
 import { logSecurityEvent } from "@/lib/securityLog";
 
 const isProd = process.env.NODE_ENV === "production";
+const isBuildPhase = process.env.NEXT_PHASE === "phase-production-build";
 
-if (isProd && !process.env.NEXTAUTH_SECRET) {
+if (isProd && !isBuildPhase && !process.env.NEXTAUTH_SECRET) {
   throw new Error("NEXTAUTH_SECRET must be set in production.");
 }
 
