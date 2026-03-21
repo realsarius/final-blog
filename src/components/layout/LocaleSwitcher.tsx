@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import styles from "./LocaleSwitcher.module.css";
 
@@ -21,19 +20,29 @@ export default function LocaleSwitcher({ currentLocale }: LocaleSwitcherProps) {
 
   return (
     <div className={styles.switcher} aria-label={ariaLabel}>
-      <Link
-        href={`/api/locale?locale=tr&redirect=${encodeURIComponent(redirectPath)}`}
-        className={`${styles.link} ${currentLocale === "tr" ? styles.active : ""}`}
-      >
-        TR
-      </Link>
+      <form method="post" action="/api/locale">
+        <input type="hidden" name="locale" value="tr" />
+        <input type="hidden" name="redirect" value={redirectPath} />
+        <button
+          type="submit"
+          className={`${styles.link} ${currentLocale === "tr" ? styles.active : ""}`}
+          aria-current={currentLocale === "tr" ? "true" : undefined}
+        >
+          TR
+        </button>
+      </form>
       <span>/</span>
-      <Link
-        href={`/api/locale?locale=en&redirect=${encodeURIComponent(redirectPath)}`}
-        className={`${styles.link} ${currentLocale === "en" ? styles.active : ""}`}
-      >
-        EN
-      </Link>
+      <form method="post" action="/api/locale">
+        <input type="hidden" name="locale" value="en" />
+        <input type="hidden" name="redirect" value={redirectPath} />
+        <button
+          type="submit"
+          className={`${styles.link} ${currentLocale === "en" ? styles.active : ""}`}
+          aria-current={currentLocale === "en" ? "true" : undefined}
+        >
+          EN
+        </button>
+      </form>
     </div>
   );
 }
