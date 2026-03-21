@@ -1,6 +1,5 @@
-import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
-import { authOptions } from "@/lib/auth";
+import { requireAdminApiSession } from "@/lib/adminApiAuth";
 import { prisma } from "@/lib/prisma";
 import { getServerLocale } from "@/lib/i18n";
 
@@ -30,32 +29,17 @@ function normalizeQuery(value: string | null) {
   return value.trim().slice(0, 120);
 }
 
-async function requireAdmin() {
-  const locale = await getServerLocale();
-  const t = locale === "en"
-    ? { sessionRequired: "Session required.", forbidden: "You are not authorized." }
-    : { sessionRequired: "Oturum gerekli.", forbidden: "Yetkiniz yok." };
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return NextResponse.json({ ok: false, error: t.sessionRequired }, { status: 401 });
-  }
-  if (session.user.role !== "ADMIN") {
-    return NextResponse.json({ ok: false, error: t.forbidden }, { status: 403 });
-  }
-  return null;
-}
-
 export async function GET(request: Request) {
-  const authError = await requireAdmin();
-  if (authError) {
-    return authError;
+  const locale = await getServerLocale();
+  const auth = await requireAdminApiSession(locale);
+  if (auth.error) {
+    return auth.error;
   }
 
   const url = new URL(request.url);
   const query = normalizeQuery(url.searchParams.get("q"));
-  const page = toPositiveInt(url.searchParams.get("page"), 1);
+  const requestedPage = toPositiveInt(url.searchParams.get("page"), 1);
   const limit = normalizeLimit(url.searchParams.get("limit"));
-  const skip = (page - 1) * limit;
 
   const where = {
     status: "PUBLISHED" as const,
@@ -70,26 +54,26 @@ export async function GET(request: Request) {
       : {}),
   };
 
-  const [totalCount, items] = await Promise.all([
-    prisma.post.count({ where }),
-    prisma.post.findMany({
-      where,
-      orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
-      skip,
-      take: limit,
-      select: {
-        id: true,
-        title: true,
-        slug: true,
-        excerpt: true,
-        coverImageUrl: true,
-        featured: true,
-      },
-    }),
-  ]);
+  const totalCount = await prisma.post.count({ where });
 
   const totalPages = Math.max(1, Math.ceil(totalCount / limit));
-  const safePage = Math.min(page, totalPages);
+  const safePage = Math.min(requestedPage, totalPages);
+  const skip = (safePage - 1) * limit;
+
+  const items = await prisma.post.findMany({
+    where,
+    orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
+    skip,
+    take: limit,
+    select: {
+      id: true,
+      title: true,
+      slug: true,
+      excerpt: true,
+      coverImageUrl: true,
+      featured: true,
+    },
+  });
 
   return NextResponse.json({
     ok: true,

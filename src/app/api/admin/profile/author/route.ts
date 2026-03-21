@@ -1,6 +1,6 @@
-import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
-import { authOptions } from "@/lib/auth";
+import { requireAdminApiSession } from "@/lib/adminApiAuth";
+import { getServerLocale } from "@/lib/i18n";
 import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
@@ -27,19 +27,9 @@ function clampFocus(value: unknown) {
   return Math.min(100, Math.max(0, Math.round(parsed)));
 }
 
-async function requireAdmin() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return { userId: null, userEmail: null, error: NextResponse.json({ ok: false, error: "Oturum gerekli." }, { status: 401 }) };
-  }
-  if (session.user.role !== "ADMIN") {
-    return { userId: null, userEmail: null, error: NextResponse.json({ ok: false, error: "Yetkiniz yok." }, { status: 403 }) };
-  }
-  return { userId: session.user.id, userEmail: session.user.email ?? null, error: null as NextResponse<unknown> | null };
-}
-
 export async function PUT(request: Request) {
-  const auth = await requireAdmin();
+  const locale = await getServerLocale();
+  const auth = await requireAdminApiSession(locale);
   if (auth.error) {
     return auth.error;
   }

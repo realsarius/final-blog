@@ -1,6 +1,5 @@
-import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
-import { authOptions } from "@/lib/auth";
+import { requireAdminApiSession } from "@/lib/adminApiAuth";
 import { getServerLocale } from "@/lib/i18n";
 import { prisma } from "@/lib/prisma";
 
@@ -84,21 +83,6 @@ function toUiTransitionDirection(value: unknown): HeroTransitionDirectionUi {
   return normalizeTransitionDirectionDb(value) === "RIGHT" ? "right" : "left";
 }
 
-async function requireAdmin() {
-  const locale = await getServerLocale();
-  const t = locale === "en"
-    ? { sessionRequired: "Session required.", forbidden: "You are not authorized." }
-    : { sessionRequired: "Oturum gerekli.", forbidden: "Yetkiniz yok." };
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return NextResponse.json({ ok: false, error: t.sessionRequired }, { status: 401 });
-  }
-  if (session.user.role !== "ADMIN") {
-    return NextResponse.json({ ok: false, error: t.forbidden }, { status: 403 });
-  }
-  return null;
-}
-
 function getHeroSlideModel() {
   return (prisma as unknown as {
     heroSlide?: {
@@ -120,9 +104,10 @@ function getHeroConfigModel() {
 }
 
 export async function GET() {
-  const authError = await requireAdmin();
-  if (authError) {
-    return authError;
+  const locale = await getServerLocale();
+  const auth = await requireAdminApiSession(locale);
+  if (auth.error) {
+    return auth.error;
   }
   const heroSlideModel = getHeroSlideModel();
   const heroConfigModel = getHeroConfigModel();
@@ -199,9 +184,9 @@ export async function PUT(request: Request) {
       slidesRequired: "slides dizisi zorunlu.",
       invalidPostSelection: "Seçilen yazılardan biri geçersiz.",
     };
-  const authError = await requireAdmin();
-  if (authError) {
-    return authError;
+  const auth = await requireAdminApiSession(locale);
+  if (auth.error) {
+    return auth.error;
   }
   const heroSlideModel = getHeroSlideModel();
   const heroConfigModel = getHeroConfigModel();
