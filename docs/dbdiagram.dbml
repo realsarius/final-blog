@@ -152,6 +152,25 @@ Table SiteSettings {
   Note: 'Singleton ayar tablosu. Beklenen tek kayit id=default.'
 }
 
+Table AuditLog {
+  id varchar [pk]
+  channel varchar [not null, default: 'security']
+  event varchar [not null]
+  severity varchar [not null, default: 'info']
+  requestId varchar
+  actorUserId varchar
+  path varchar
+  ipAddress varchar
+  context json
+  createdAt timestamp [not null, default: `now()`]
+
+  indexes {
+    (channel, createdAt)
+    (event, createdAt)
+    (actorUserId, createdAt)
+  }
+}
+
 Ref: Post.authorId > User.id
 Ref: HeroSlide.postId > Post.id [delete: set null]
 Ref: Category.parentId > Category.id

@@ -1,0 +1,417 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "FinalBlog API",
+    "version": "1.0.0",
+    "description": "FinalBlog yönetim ve public API dokümantasyonu."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3007",
+      "description": "Local development"
+    }
+  ],
+  "tags": [
+    { "name": "Admin" },
+    { "name": "Upload" },
+    { "name": "Public" },
+    { "name": "Locale" },
+    { "name": "Auth" }
+  ],
+  "components": {
+    "securitySchemes": {
+      "cookieAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "next-auth.session-token"
+      }
+    },
+    "schemas": {
+      "OkResponse": {
+        "type": "object",
+        "properties": {
+          "ok": { "type": "boolean" },
+          "error": { "type": "string" }
+        },
+        "required": ["ok"]
+      },
+      "SuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "integer", "enum": [0, 1] },
+          "error": { "type": "string" }
+        },
+        "required": ["success"]
+      },
+      "ContactRequest": {
+        "type": "object",
+        "properties": {
+          "firstName": { "type": "string", "minLength": 1, "maxLength": 80 },
+          "lastName": { "type": "string", "minLength": 1, "maxLength": 80 },
+          "email": { "type": "string", "format": "email", "maxLength": 190 },
+          "topic": { "type": "string", "enum": ["isbirligi", "danismanlik", "mentorluk", "diger"] },
+          "message": { "type": "string", "minLength": 10, "maxLength": 4000 },
+          "website": { "type": "string", "default": "" }
+        },
+        "required": ["firstName", "lastName", "email", "topic", "message"]
+      },
+      "HeroSettings": {
+        "type": "object",
+        "properties": {
+          "autoplaySeconds": { "type": "integer", "minimum": 2, "maximum": 60 },
+          "transitionDirection": { "type": "string", "enum": ["left", "right"] }
+        }
+      },
+      "HeroSlideInput": {
+        "type": "object",
+        "properties": {
+          "imageUrl": { "type": "string" },
+          "postId": { "type": "string" },
+          "titleColorLeft": { "type": "string", "pattern": "^#([0-9a-fA-F]{6})$" },
+          "titleColorRight": { "type": "string", "pattern": "^#([0-9a-fA-F]{6})$" }
+        },
+        "required": ["imageUrl"]
+      }
+    }
+  },
+  "paths": {
+    "/api/auth/{path}": {
+      "get": {
+        "tags": ["Auth"],
+        "summary": "NextAuth handler (dynamic)",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "NextAuth response" }
+        }
+      },
+      "post": {
+        "tags": ["Auth"],
+        "summary": "NextAuth handler (dynamic)",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "NextAuth response" }
+        }
+      }
+    },
+    "/api/contact": {
+      "post": {
+        "tags": ["Public"],
+        "summary": "İletişim formu gönder",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ContactRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Mesaj işlendi",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/OkResponse" }
+              }
+            }
+          },
+          "400": { "description": "Validation hatası" },
+          "429": { "description": "Rate limit" },
+          "500": { "description": "Mail yapılandırma hatası" },
+          "502": { "description": "Mail sağlayıcı hatası" }
+        }
+      }
+    },
+    "/api/locale": {
+      "get": {
+        "tags": ["Locale"],
+        "summary": "Locale redirect",
+        "parameters": [
+          { "name": "locale", "in": "query", "schema": { "type": "string", "enum": ["tr", "en"] } },
+          { "name": "redirect", "in": "query", "schema": { "type": "string", "default": "/" } }
+        ],
+        "responses": {
+          "307": { "description": "Redirect" }
+        }
+      },
+      "post": {
+        "tags": ["Locale"],
+        "summary": "Locale cookie set + redirect",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "locale": { "type": "string", "enum": ["tr", "en"] },
+                  "redirect": { "type": "string", "default": "/" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "303": { "description": "Redirect + Set-Cookie" }
+        }
+      }
+    },
+    "/api/uploads": {
+      "get": {
+        "tags": ["Upload"],
+        "summary": "Medya listele",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          { "name": "folder", "in": "query", "schema": { "type": "string" } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 60, "maximum": 200 } }
+        ],
+        "responses": {
+          "200": { "description": "Liste sonucu" },
+          "401": { "description": "Oturum gerekli" },
+          "403": { "description": "Yetki yok" }
+        }
+      },
+      "post": {
+        "tags": ["Upload"],
+        "summary": "Medya yükle",
+        "security": [{ "cookieAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": { "type": "string", "format": "binary" },
+                  "folder": { "type": "string" }
+                },
+                "required": ["file"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Upload sonucu",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SuccessResponse" }
+              }
+            }
+          },
+          "400": { "description": "Validation hatası" },
+          "401": { "description": "Oturum gerekli" },
+          "403": { "description": "Yetki yok" },
+          "429": { "description": "Rate limit" }
+        }
+      },
+      "delete": {
+        "tags": ["Upload"],
+        "summary": "Medya sil",
+        "security": [{ "cookieAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "key": { "type": "string" },
+                  "url": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Silme sonucu",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SuccessResponse" }
+              }
+            }
+          },
+          "400": { "description": "Bad request" },
+          "401": { "description": "Oturum gerekli" },
+          "403": { "description": "Yetki yok" }
+        }
+      },
+      "options": {
+        "tags": ["Upload"],
+        "summary": "Upload CORS preflight",
+        "responses": {
+          "204": { "description": "Allowed origin" },
+          "403": { "description": "Blocked origin" }
+        }
+      }
+    },
+    "/api/v1/uploads": {
+      "get": {
+        "tags": ["Upload"],
+        "summary": "Alias: /api/uploads GET",
+        "responses": {
+          "200": { "description": "Liste sonucu" }
+        }
+      },
+      "post": {
+        "tags": ["Upload"],
+        "summary": "Alias: /api/uploads POST",
+        "responses": {
+          "200": { "description": "Upload sonucu" }
+        }
+      },
+      "delete": {
+        "tags": ["Upload"],
+        "summary": "Alias: /api/uploads DELETE",
+        "responses": {
+          "200": { "description": "Silme sonucu" }
+        }
+      },
+      "options": {
+        "tags": ["Upload"],
+        "summary": "Alias: /api/uploads OPTIONS",
+        "responses": {
+          "204": { "description": "CORS preflight" }
+        }
+      }
+    },
+    "/api/admin/hero": {
+      "get": {
+        "tags": ["Admin"],
+        "summary": "Hero slider ve ayarlarını getir",
+        "security": [{ "cookieAuth": [] }],
+        "responses": {
+          "200": { "description": "Hero config response" },
+          "401": { "description": "Oturum gerekli" },
+          "403": { "description": "Yetki yok" }
+        }
+      },
+      "put": {
+        "tags": ["Admin"],
+        "summary": "Hero slide ve ayarlarını güncelle",
+        "security": [{ "cookieAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "slides": {
+                    "type": "array",
+                    "items": { "$ref": "#/components/schemas/HeroSlideInput" }
+                  },
+                  "settings": { "$ref": "#/components/schemas/HeroSettings" }
+                },
+                "required": ["slides"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Updated" },
+          "400": { "description": "Validation error" },
+          "401": { "description": "Oturum gerekli" },
+          "403": { "description": "Yetki yok" },
+          "503": { "description": "Hero model unavailable" }
+        }
+      }
+    },
+    "/api/admin/posts/options": {
+      "get": {
+        "tags": ["Admin"],
+        "summary": "Yayınlanmış yazı seçeneklerini getir",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 12 } },
+          { "name": "q", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Options response" },
+          "401": { "description": "Oturum gerekli" },
+          "403": { "description": "Yetki yok" }
+        }
+      }
+    },
+    "/api/admin/posts/{id}/featured": {
+      "put": {
+        "tags": ["Admin"],
+        "summary": "Yazının featured alanını güncelle",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "featured": { "type": "boolean" }
+                },
+                "required": ["featured"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Updated" },
+          "400": { "description": "Bad request" },
+          "401": { "description": "Oturum gerekli" },
+          "403": { "description": "Yetki yok" },
+          "404": { "description": "Post not found" }
+        }
+      }
+    },
+    "/api/admin/profile/author": {
+      "put": {
+        "tags": ["Admin"],
+        "summary": "Admin profil avatar/focus ayarlarını güncelle",
+        "security": [{ "cookieAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "avatarUrl": { "type": "string", "nullable": true },
+                  "avatarFocusX": { "type": "integer", "minimum": 0, "maximum": 100 },
+                  "avatarFocusY": { "type": "integer", "minimum": 0, "maximum": 100 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Updated" },
+          "400": { "description": "Bad request" },
+          "401": { "description": "Oturum gerekli" },
+          "403": { "description": "Yetki yok" },
+          "404": { "description": "Author not found" }
+        }
+      }
+    }
+  }
+}

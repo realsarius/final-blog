@@ -98,6 +98,7 @@ Schema is managed with Prisma code-first approach: [`prisma/schema.prisma`](pris
 8. **HeroSlide**: Home slider items.
 9. **HeroConfig**: Hero autoplay/transition singleton settings.
 10. **SiteSettings**: Global site settings + multilingual about content fields.
+11. **AuditLog**: Structured security/application audit trail records.
 
 ### 3.2 Migration and Schema Management
 
@@ -116,6 +117,8 @@ In this project, API surface is implemented via Next.js route handlers under `sr
 - **Versioned Upload Alias:** `/api/v1/uploads` (same handler as `/api/uploads`)
 - **HTTP Methods:** GET, POST, PUT, DELETE, OPTIONS
 - **Auth Model:** Session cookie + 401/403 semantics for admin-protected endpoints
+- **Live API Docs (Swagger UI):** `/api/docs`
+- **OpenAPI JSON:** `/api/openapi` (source file: `docs/openapi.json`)
 
 ### 4.2 Response and Error Model
 
@@ -158,7 +161,18 @@ Examples:
 - `PUT /api/admin/posts/{id}/featured`
 - `PUT /api/admin/profile/author`
 
-### 4.5 Upload API Security and Operational Semantics
+### 4.5 Swagger and Postman
+
+- Swagger UI: [`/api/docs`](http://localhost:3007/api/docs)
+- OpenAPI spec: [`docs/openapi.json`](docs/openapi.json)
+- Postman collection: [`docs/postman_collection.json`](docs/postman_collection.json)
+
+Postman import flow:
+
+1. Postman > Import > `docs/postman_collection.json`
+2. Update `baseUrl` variable for environment (`http://localhost:3007` or production domain)
+3. For admin endpoint testing, log in as admin in web UI first to get a valid session cookie
+### 4.6 Upload API Security and Operational Semantics
 
 - Only image MIME types are accepted (`jpeg/png/webp/gif`)
 - File signatures are validated (not relying only on extension/type)
@@ -167,7 +181,7 @@ Examples:
 - Optional malware scanning (ClamAV) is supported
 - CORS is restricted via allow-list (`UPLOAD_CORS_ALLOWED_ORIGINS`)
 
-### 4.6 Contact API Semantics
+### 4.7 Contact API Semantics
 
 - `POST /api/contact`
 - Zod payload validation + honeypot field
@@ -202,13 +216,15 @@ Global headers are applied in `next.config.ts`:
 
 ## 6. Testing Strategy
 
-Current testing is focused on lint + smoke + security checks.
+Current testing includes lint + unit + security checks.
 
 ### 6.1 Active Checks
 
 - `npm run lint`
+- `npm run test`
 - `npm run audit:prod`
-- `npm run audit:high`
+- `npm run audit:ci`
+- `npm run security:secrets`
 - `npm run security:smoke`
 - `npm run security:check`
 
@@ -222,7 +238,9 @@ GitHub Actions workflow: [`.github/workflows/security-audit.yml`](.github/workfl
 
 ### 6.3 Note
 
-There is no classic unit/integration test folder yet. Current strategy is mostly security smoke and static analysis driven.
+- Vitest-based unit tests are active (`src/**/*.test.ts`, `src/test`).
+- Playwright E2E scaffolding is available (`tests/e2e`).
+- Security gates in CI run lint + secret scan + policy-filtered audit.
 
 ## 7. Installation and Run
 
@@ -355,3 +373,5 @@ This project is licensed under the MIT License.
 ## Additional Documents
 
 - [DBML Diagram Source](docs/dbdiagram.dbml)
+- [OpenAPI Spec](docs/openapi.json)
+- [Postman Collection](docs/postman_collection.json)

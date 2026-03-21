@@ -116,6 +116,8 @@ Bu projede API yüzeyi Next.js route handler’ları altında çalışır (`src/
 - **Upload için Versioned Alias:** `/api/v1/uploads` (`/api/uploads` ile aynı handler)
 - **HTTP Metotları:** GET, POST, PUT, DELETE, OPTIONS
 - **Auth Modeli:** Session cookie + admin role kontrolü gereken endpoint’lerde 401/403 semantiği
+- **Canlı API Dokümanı (Swagger UI):** `/api/docs`
+- **OpenAPI JSON:** `/api/openapi` (kaynak dosya: `docs/openapi.json`)
 
 ### 4.2 Response ve Hata Modeli
 
@@ -158,7 +160,18 @@ Hatalarda endpoint’e göre `ok: false` veya `success: 0` ve açıklayıcı `er
 - `PUT /api/admin/posts/{id}/featured`
 - `PUT /api/admin/profile/author`
 
-### 4.5 Upload API Güvenlik ve Operasyon Semantiği
+### 4.5 Swagger ve Postman
+
+- Swagger UI: [`/api/docs`](http://localhost:3007/api/docs)
+- OpenAPI spec: [`docs/openapi.json`](docs/openapi.json)
+- Postman collection: [`docs/postman_collection.json`](docs/postman_collection.json)
+
+Postman import akışı:
+
+1. Postman > Import > `docs/postman_collection.json`
+2. `baseUrl` değişkenini ortama göre güncelle (`http://localhost:3007` veya prod domain)
+3. Admin endpoint testleri için önce web arayüzünden admin login yaparak session cookie edin
+### 4.6 Upload API Güvenlik ve Operasyon Semantiği
 
 - Sadece görsel MIME tipleri kabul edilir (`jpeg/png/webp/gif`)
 - Dosya içeriği signature kontrolü yapılır (sadece extension/type’e güvenilmez)
@@ -167,7 +180,7 @@ Hatalarda endpoint’e göre `ok: false` veya `success: 0` ve açıklayıcı `er
 - İsteğe bağlı malware taraması (ClamAV) desteklenir
 - CORS allow-list ile sınırlanır (`UPLOAD_CORS_ALLOWED_ORIGINS`)
 
-### 4.6 Contact API Semantiği
+### 4.7 Contact API Semantiği
 
 - `POST /api/contact`
 - Zod payload doğrulaması + honeypot alanı
@@ -207,8 +220,10 @@ Projede şu an ağırlıklı olarak lint + smoke + security test yaklaşımı bu
 ### 6.1 Çalışan Kontroller
 
 - `npm run lint`
+- `npm run test`
 - `npm run audit:prod`
-- `npm run audit:high`
+- `npm run audit:ci`
+- `npm run security:secrets`
 - `npm run security:smoke`
 - `npm run security:check`
 
@@ -222,7 +237,9 @@ GitHub Actions workflow: [`.github/workflows/security-audit.yml`](.github/workfl
 
 ### 6.3 Not
 
-Repository’de klasik unit/integration test klasörü henüz bulunmuyor. Mevcut test stratejisi security smoke ve statik analiz ağırlıklı ilerliyor.
+- Vitest tabanlı unit testler aktiftir (`src/**/*.test.ts`, `src/test`).
+- E2E test altyapısı Playwright ile hazırdır (`tests/e2e`).
+- Güvenlik tarafında lint + secret scan + policy-filtered audit zinciri CI’da çalışır.
 
 ## 7. Kurulum ve Çalıştırma
 
@@ -355,3 +372,5 @@ Bu proje MIT lisansı ile lisanslanmıştır.
 ## Ek Dokümanlar
 
 - [DBML Diyagram Kaynağı](docs/dbdiagram.dbml)
+- [OpenAPI Spec](docs/openapi.json)
+- [Postman Collection](docs/postman_collection.json)

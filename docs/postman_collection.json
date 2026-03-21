@@ -1,0 +1,236 @@
+{
+  "info": {
+    "name": "FinalBlog API Collection",
+    "_postman_id": "f5f3c77d-8bf7-4ce7-93db-f4f57935601a",
+    "description": "FinalBlog API endpoint koleksiyonu (admin + public).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3007"
+    },
+    {
+      "key": "adminPostId",
+      "value": ""
+    },
+    {
+      "key": "uploadKey",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Public",
+      "item": [
+        {
+          "name": "POST /api/contact",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Ada\",\n  \"lastName\": \"Lovelace\",\n  \"email\": \"ada@example.com\",\n  \"topic\": \"danismanlik\",\n  \"message\": \"Merhaba, teknik danışmanlık almak istiyorum.\",\n  \"website\": \"\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/contact",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "contact"]
+            }
+          }
+        },
+        {
+          "name": "GET /api/locale",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/locale?locale=tr&redirect=/",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "locale"],
+              "query": [
+                { "key": "locale", "value": "tr" },
+                { "key": "redirect", "value": "/" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Upload",
+      "item": [
+        {
+          "name": "GET /api/uploads",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/uploads?limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "uploads"],
+              "query": [{ "key": "limit", "value": "20" }]
+            }
+          }
+        },
+        {
+          "name": "POST /api/uploads",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": ""
+                },
+                {
+                  "key": "folder",
+                  "type": "text",
+                  "value": "uploads"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/uploads",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "uploads"]
+            }
+          }
+        },
+        {
+          "name": "DELETE /api/uploads",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"key\": \"{{uploadKey}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/uploads",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "uploads"]
+            }
+          }
+        },
+        {
+          "name": "GET /api/v1/uploads",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/uploads?limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "uploads"],
+              "query": [{ "key": "limit", "value": "20" }]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "GET /api/admin/hero",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/hero",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "hero"]
+            }
+          }
+        },
+        {
+          "name": "PUT /api/admin/hero",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"slides\": [\n    {\n      \"imageUrl\": \"/uploads/hero/example.jpg\",\n      \"postId\": \"\",\n      \"titleColorLeft\": \"#111111\",\n      \"titleColorRight\": \"#999999\"\n    }\n  ],\n  \"settings\": {\n    \"autoplaySeconds\": 8,\n    \"transitionDirection\": \"left\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/hero",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "hero"]
+            }
+          }
+        },
+        {
+          "name": "GET /api/admin/posts/options",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/posts/options?page=1&limit=12&q=",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "posts", "options"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "12" },
+                { "key": "q", "value": "" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "PUT /api/admin/posts/:id/featured",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"featured\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/posts/{{adminPostId}}/featured",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "posts", "{{adminPostId}}", "featured"]
+            }
+          }
+        },
+        {
+          "name": "PUT /api/admin/profile/author",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"avatarUrl\": \"/uploads/avatars/admin.jpg\",\n  \"avatarFocusX\": 50,\n  \"avatarFocusY\": 50\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/profile/author",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "profile", "author"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
